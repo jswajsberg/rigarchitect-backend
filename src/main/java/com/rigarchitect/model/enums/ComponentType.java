@@ -1,4 +1,4 @@
-package com.rigarchitect.model;
+package com.rigarchitect.model.enums;
 
 /**
  * Enum representing types of PC components.

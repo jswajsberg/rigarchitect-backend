@@ -1,5 +1,6 @@
 package com.rigarchitect.model;
 
+import com.rigarchitect.model.enums.CartStatus;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
