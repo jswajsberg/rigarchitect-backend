@@ -5,7 +5,8 @@ package com.rigarchitect.model.enums;
  * Matches the SQL ENUM 'cart_status' in the database.
  */
 public enum CartStatus {
+    DRAFT,
     ACTIVE,
-    CHECKED_OUT,
+    FINALIZED,
     CANCELLED
 }

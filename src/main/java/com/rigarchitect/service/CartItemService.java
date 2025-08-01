@@ -1,7 +1,7 @@
 package com.rigarchitect.service;
 
-import com.rigarchitect.model.CartItem;
 import com.rigarchitect.model.BuildCart;
+import com.rigarchitect.model.CartItem;
 import com.rigarchitect.repository.CartItemRepository;
 import org.springframework.stereotype.Service;
 
@@ -18,7 +18,7 @@ public class CartItemService {
     }
 
     public List<CartItem> getItemsByCart(BuildCart buildCart) {
-        return cartItemRepository.findByBuildCart(buildCart);
+        return cartItemRepository.findByCart(buildCart);
     }
 
     public Optional<CartItem> getItemById(Long id) {

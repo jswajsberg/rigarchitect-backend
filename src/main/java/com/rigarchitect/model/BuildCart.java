@@ -5,10 +5,11 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import lombok.ToString;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Entity class representing a user's PC build cart.
@@ -19,7 +20,6 @@ import java.time.LocalDateTime;
 @Getter
 @Setter
 @NoArgsConstructor
-@ToString
 public class BuildCart {
 
     @Id
@@ -41,11 +41,17 @@ public class BuildCart {
     @Column(name = "total_price", nullable = false, precision = 10, scale = 2)
     private BigDecimal totalPrice = BigDecimal.ZERO;
 
+    @OneToMany(mappedBy = "buildCart", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<CartItem> cartItems = new ArrayList<>();
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
+
+    @Column(name = "finalized_at")
+    private LocalDateTime finalizedAt;
 
     // Automatically set timestamps before persisting or updating
     @PrePersist
