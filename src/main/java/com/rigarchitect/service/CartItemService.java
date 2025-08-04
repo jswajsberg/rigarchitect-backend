@@ -32,4 +32,11 @@ public class CartItemService {
     public void deleteItem(Long id) {
         cartItemRepository.deleteById(id);
     }
+
+    public Optional<CartItem> updateQuantity(Long itemId, int newQuantity) {
+        return cartItemRepository.findById(itemId).map(item -> {
+            item.setQuantity(newQuantity);
+            return cartItemRepository.save(item);
+        });
+    }
 }

@@ -1,6 +1,9 @@
 package com.rigarchitect.controller;
 
+import com.rigarchitect.dto.buildcart.BuildCartRequest;
+import com.rigarchitect.dto.buildcart.BuildCartResponse;
 import com.rigarchitect.model.BuildCart;
+import com.rigarchitect.model.User;
 import com.rigarchitect.service.BuildCartService;
 import com.rigarchitect.service.UserService;
 import org.springframework.http.ResponseEntity;
@@ -8,9 +11,10 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @RestController
-@RequestMapping("/api/carts")
+@RequestMapping("/api/v1/carts")  // Versioned endpoint
 public class BuildCartController {
 
     private final BuildCartService buildCartService;
@@ -22,28 +26,36 @@ public class BuildCartController {
     }
 
     @GetMapping("/user/{userId}")
-    public ResponseEntity<List<BuildCart>> getUserCarts(@PathVariable Long userId) {
-        return userService.getUserById(userId)
-                .map(user -> ResponseEntity.ok(buildCartService.getCartsByUser(user)))
-                .orElse(ResponseEntity.notFound().build());
+    public ResponseEntity<List<BuildCartResponse>> getUserCarts(@PathVariable Long userId) {
+        Optional<User> userOpt = userService.getUserEntityById(userId);
+        if (userOpt.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+        List<BuildCart> carts = buildCartService.getCartsByUser(userOpt.get());
+        List<BuildCartResponse> responses = carts.stream()
+                .map(this::toResponse)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(responses);
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<BuildCart> getCart(@PathVariable Long id) {
-        Optional<BuildCart> cart = buildCartService.getCartById(id);
-        return cart.map(ResponseEntity::ok)
+    public ResponseEntity<BuildCartResponse> getCart(@PathVariable Long id) {
+        return buildCartService.getCartById(id)
+                .map(this::toResponse)
+                .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
 
     @PostMapping("/user/{userId}")
-    public ResponseEntity<BuildCart> createCartForUser(@PathVariable Long userId, @RequestBody BuildCart cart) {
-        return userService.getUserById(userId)
-                .map(user -> {
-                    cart.setUser(user);
-                    BuildCart saved = buildCartService.saveCart(cart);
-                    return ResponseEntity.ok(saved);
-                })
-                .orElse(ResponseEntity.notFound().build());
+    public ResponseEntity<BuildCartResponse> createCartForUser(@PathVariable Long userId,
+                                                               @RequestBody BuildCartRequest request) {
+        Optional<User> userOpt = userService.getUserEntityById(userId);
+        if (userOpt.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+        BuildCart cart = toEntity(request, userOpt.get());
+        BuildCart saved = buildCartService.saveCart(cart);
+        return ResponseEntity.ok(toResponse(saved));
     }
 
     @PostMapping("/{cartId}/finalize")
@@ -63,12 +75,39 @@ public class BuildCartController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<BuildCart> updateCart(@PathVariable Long id, @RequestBody BuildCart updatedCart) {
+    public ResponseEntity<BuildCartResponse> updateCart(@PathVariable Long id,
+                                                        @RequestBody BuildCartRequest request) {
         return buildCartService.getCartById(id)
                 .map(existing -> {
-                    updatedCart.setId(id);
-                    return ResponseEntity.ok(buildCartService.saveCart(updatedCart));
+                    BuildCart updated = toEntity(request, existing.getUser());
+                    updated.setId(id);
+                    BuildCart saved = buildCartService.saveCart(updated);
+                    return ResponseEntity.ok(toResponse(saved));
                 })
                 .orElse(ResponseEntity.notFound().build());
+    }
+
+    // Mapper: entity -> response DTO
+    private BuildCartResponse toResponse(BuildCart cart) {
+        return new BuildCartResponse(
+                cart.getId(),
+                cart.getUser().getId(),
+                cart.getName(),
+                cart.getStatus(),
+                cart.getTotalPrice(),
+                cart.getCreatedAt(),
+                cart.getUpdatedAt(),
+                cart.getFinalizedAt()
+        );
+    }
+
+    // Mapper: request DTO + user -> entity
+    private BuildCart toEntity(BuildCartRequest request, User user) {
+        BuildCart cart = new BuildCart();
+        cart.setUser(user);
+        cart.setName(request.name());
+        cart.setStatus(request.status());
+        cart.setTotalPrice(request.totalPrice() != null ? request.totalPrice() : cart.getTotalPrice());
+        return cart;
     }
 }

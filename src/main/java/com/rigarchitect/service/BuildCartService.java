@@ -28,7 +28,7 @@ public class BuildCartService {
         return buildCartRepository.findByUser(user);
     }
 
-    public Optional<BuildCart> getCartsByUserAndStatus(User user, CartStatus status) {
+    public Optional<BuildCart> getCartByUserAndStatus(User user, CartStatus status) {
         return buildCartRepository.findFirstByUserAndStatus(user, status);
     }
 
@@ -47,25 +47,27 @@ public class BuildCartService {
     @Transactional
     public void finalizeCartById(Long cartId) {
         BuildCart cart = buildCartRepository.findById(cartId)
-                .orElseThrow(() -> new RuntimeException("Cart not found"));
+                .orElseThrow(() -> new IllegalArgumentException("Cart not found with id: " + cartId));
 
         if (cart.getStatus() != CartStatus.ACTIVE) {
-            throw new RuntimeException("Cart is not active");
+            throw new IllegalStateException("Cart is not active and cannot be finalized.");
         }
 
         User user = cart.getUser();
+
         BigDecimal totalCost = cart.getCartItems().stream()
                 .map(item -> item.getComponent().getPrice().multiply(BigDecimal.valueOf(item.getQuantity())))
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         if (user.getBudget().compareTo(totalCost) < 0) {
-            throw new RuntimeException("Insufficient funds to finalize cart.");
+            throw new IllegalStateException("Insufficient funds to finalize the cart.");
         }
 
         user.setBudget(user.getBudget().subtract(totalCost));
         cart.setStatus(CartStatus.FINALIZED);
         cart.setFinalizedAt(LocalDateTime.now());
 
+        // Persist changes
         userRepository.save(user);
         buildCartRepository.save(cart);
     }

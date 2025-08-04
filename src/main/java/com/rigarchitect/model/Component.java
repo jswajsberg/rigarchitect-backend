@@ -27,7 +27,7 @@ public class Component {
     @Column(nullable = false, length = 100)
     private String name;
 
-    // Store enum as string in DB (e.g., "CPU", "GPU")
+    // Store enum as a string in DB (e.g., "CPU", "GPU")
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private ComponentType type;
