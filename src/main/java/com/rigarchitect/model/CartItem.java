@@ -27,7 +27,7 @@ public class CartItem {
     // Many CartItems belong to one BuildCart
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "cart_id", nullable = false)
-    private BuildCart cart;
+    private BuildCart buildCart;
 
     // Many CartItems reference one Component
     @ManyToOne(fetch = FetchType.EAGER)

@@ -1,4 +1,4 @@
-package com.rigarchitect.rigarchitect;
+package com.rigarchitect;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;

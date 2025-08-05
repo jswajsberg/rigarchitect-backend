@@ -1,5 +1,6 @@
 package com.rigarchitect.controller;
 
+import com.rigarchitect.dto.MessageResponse;
 import com.rigarchitect.dto.component.ComponentRequest;
 import com.rigarchitect.dto.component.ComponentResponse;
 import com.rigarchitect.exception.ResourceNotFoundException;
@@ -56,11 +57,11 @@ public class ComponentController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteComponent(@PathVariable Long id) {
+    public ResponseEntity<MessageResponse> deleteComponent(@PathVariable Long id) {
         if (componentService.getComponentById(id).isEmpty()) {
             throw new ResourceNotFoundException("Component with ID " + id + " not found");
         }
         componentService.deleteComponent(id);
-        return ResponseEntity.noContent().build();
+        return ResponseEntity.ok(new MessageResponse("Component with ID " + id + " deleted successfully"));
     }
 }

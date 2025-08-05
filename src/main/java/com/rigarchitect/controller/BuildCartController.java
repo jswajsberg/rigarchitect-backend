@@ -1,5 +1,6 @@
 package com.rigarchitect.controller;
 
+import com.rigarchitect.dto.MessageResponse;
 import com.rigarchitect.dto.buildcart.BuildCartRequest;
 import com.rigarchitect.dto.buildcart.BuildCartResponse;
 import com.rigarchitect.exception.ResourceNotFoundException;
@@ -68,12 +69,12 @@ public class BuildCartController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteCart(@PathVariable Long id) {
+    public ResponseEntity<MessageResponse> deleteCart(@PathVariable Long id) {
         if (buildCartService.getCartById(id).isEmpty()) {
             throw new ResourceNotFoundException("Cart with ID " + id + " not found");
         }
         buildCartService.deleteCart(id);
-        return ResponseEntity.noContent().build();
+        return ResponseEntity.ok(new MessageResponse("Build with ID " + id + " deleted successfully"));
     }
 
     @PutMapping("/{id}")

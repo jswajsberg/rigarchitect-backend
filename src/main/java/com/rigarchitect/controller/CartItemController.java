@@ -1,5 +1,6 @@
 package com.rigarchitect.controller;
 
+import com.rigarchitect.dto.MessageResponse;
 import com.rigarchitect.dto.cartitem.CartItemRequest;
 import com.rigarchitect.dto.cartitem.CartItemResponse;
 import com.rigarchitect.dto.cartitem.CartItemUpdate;
@@ -56,19 +57,19 @@ public class CartItemController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteItem(@PathVariable Long id) {
+    public ResponseEntity<MessageResponse> deleteItem(@PathVariable Long id) {
         if (cartItemService.getItemById(id).isEmpty()) {
             throw new ResourceNotFoundException("Cart item with ID " + id + " not found");
         }
         cartItemService.deleteItem(id);
-        return ResponseEntity.noContent().build();
+        return ResponseEntity.ok(new MessageResponse("Cart with ID " + id + " deleted successfully"));
     }
 
     // Helper methods for DTO conversion
     private CartItemResponse toResponse(CartItem cartItem) {
         return new CartItemResponse(
                 cartItem.getId(),
-                cartItem.getCart().getId(),
+                cartItem.getBuildCart().getId(),
                 cartItem.getComponent().getId(),
                 cartItem.getComponent().getName(),
                 cartItem.getQuantity(),
@@ -81,9 +82,9 @@ public class CartItemController {
         CartItem cartItem = new CartItem();
 
         // Fetch and set the cart - throw exception if not found
-        BuildCart cart = buildCartService.getCartById(request.cartId())
+        BuildCart buildCart = buildCartService.getCartById(request.cartId())
                 .orElseThrow(() -> new ResourceNotFoundException("Cart with ID " + request.cartId() + " not found"));
-        cartItem.setCart(cart);
+        cartItem.setBuildCart(buildCart);
 
         // Fetch and set the component - throw exception if not found
         Component component = componentService.findEntityById(request.componentId())

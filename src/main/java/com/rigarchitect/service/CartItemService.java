@@ -18,7 +18,7 @@ public class CartItemService {
     }
 
     public List<CartItem> getItemsByCart(BuildCart buildCart) {
-        return cartItemRepository.findByCart(buildCart);
+        return cartItemRepository.findByBuildCart(buildCart);
     }
 
     public Optional<CartItem> getItemById(Long id) {

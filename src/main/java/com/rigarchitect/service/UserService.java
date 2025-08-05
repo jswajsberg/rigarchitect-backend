@@ -63,6 +63,7 @@ public class UserService {
         User user = new User();
         user.setName(request.name());
         user.setEmail(request.email());
+        user.setBudget(request.budget());
         return user;
     }
 }

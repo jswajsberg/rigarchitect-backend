@@ -1,5 +1,6 @@
 package com.rigarchitect.controller;
 
+import com.rigarchitect.dto.MessageResponse;
 import com.rigarchitect.dto.user.UserRequest;
 import com.rigarchitect.dto.user.UserResponse;
 import com.rigarchitect.exception.ResourceNotFoundException;
@@ -43,11 +44,12 @@ public class UserController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteUser(@PathVariable Long id) {
+    public ResponseEntity<MessageResponse> deleteUser(@PathVariable Long id) {
         if (userService.getUserEntityById(id).isEmpty()) {
             throw new ResourceNotFoundException("User with ID " + id + " not found");
         }
         userService.deleteUser(id);
-        return ResponseEntity.noContent().build();
+        return ResponseEntity.ok(new MessageResponse("User with ID " + id + " deleted successfully"));
     }
+
 }

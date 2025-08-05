@@ -8,8 +8,8 @@ import jakarta.validation.constraints.NotNull;
 import java.math.BigDecimal;
 
 public record BuildCartRequest(
-        @NotNull(message = "User ID is required")
-        Long userId,
+//        @NotNull(message = "User ID is required")
+//        Long userId,
 
         @NotBlank(message = "Name is required")
         String name,
