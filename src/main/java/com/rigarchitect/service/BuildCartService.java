@@ -46,28 +46,49 @@ public class BuildCartService {
 
     @Transactional
     public void finalizeCartById(Long cartId) {
-        BuildCart cart = buildCartRepository.findById(cartId)
-                .orElseThrow(() -> new IllegalArgumentException("Cart not found with id: " + cartId));
+        BuildCart cart = findCartOrThrow(cartId);
 
-        if (cart.getStatus() != CartStatus.ACTIVE) {
-            throw new IllegalStateException("Cart is not active and cannot be finalized.");
-        }
+        validateCartForFinalization(cart);
+
+        BigDecimal totalCost = calculateTotalCost(cart);
 
         User user = cart.getUser();
-
-        BigDecimal totalCost = cart.getCartItems().stream()
-                .map(item -> item.getComponent().getPrice().multiply(BigDecimal.valueOf(item.getQuantity())))
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-
         if (user.getBudget().compareTo(totalCost) < 0) {
             throw new IllegalStateException("Insufficient funds to finalize the cart.");
         }
 
+        applyFinalization(cart, user, totalCost);
+    }
+
+    // --- Private Helper Methods ---
+
+    private BuildCart findCartOrThrow(Long cartId) {
+        return buildCartRepository.findById(cartId)
+                .orElseThrow(() -> new IllegalArgumentException("Cart not found with id: " + cartId));
+    }
+
+    private void validateCartForFinalization(BuildCart cart) {
+        if (cart.getStatus() != CartStatus.ACTIVE) {
+            throw new IllegalStateException("Only active carts can be finalized.");
+        }
+    }
+
+    private BigDecimal calculateTotalCost(BuildCart cart) {
+        return cart.getCartItems().stream()
+                .map(item -> {
+                    if (item.getComponent() == null || item.getComponent().getPrice() == null) {
+                        return BigDecimal.ZERO;
+                    }
+                    return item.getComponent().getPrice().multiply(BigDecimal.valueOf(item.getQuantity()));
+                })
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    private void applyFinalization(BuildCart cart, User user, BigDecimal totalCost) {
         user.setBudget(user.getBudget().subtract(totalCost));
         cart.setStatus(CartStatus.FINALIZED);
         cart.setFinalizedAt(LocalDateTime.now());
 
-        // Persist changes
         userRepository.save(user);
         buildCartRepository.save(cart);
     }

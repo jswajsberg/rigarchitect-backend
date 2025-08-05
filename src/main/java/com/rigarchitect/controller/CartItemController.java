@@ -3,112 +3,95 @@ package com.rigarchitect.controller;
 import com.rigarchitect.dto.cartitem.CartItemRequest;
 import com.rigarchitect.dto.cartitem.CartItemResponse;
 import com.rigarchitect.dto.cartitem.CartItemUpdate;
+import com.rigarchitect.exception.ResourceNotFoundException;
 import com.rigarchitect.model.BuildCart;
 import com.rigarchitect.model.CartItem;
 import com.rigarchitect.model.Component;
 import com.rigarchitect.service.BuildCartService;
 import com.rigarchitect.service.CartItemService;
 import com.rigarchitect.service.ComponentService;
+import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
-import java.util.Optional;
-import java.util.stream.Collectors;
-
 @RestController
-@RequestMapping("/api/v1/items")  // Versioned endpoint
+@RequestMapping("/api/v1/items")
 public class CartItemController {
 
     private final CartItemService cartItemService;
     private final BuildCartService buildCartService;
     private final ComponentService componentService;
 
-    public CartItemController(CartItemService cartItemService, BuildCartService buildCartService, ComponentService componentService) {
+    public CartItemController(CartItemService cartItemService,
+                              BuildCartService buildCartService,
+                              ComponentService componentService) {
         this.cartItemService = cartItemService;
         this.buildCartService = buildCartService;
         this.componentService = componentService;
     }
 
-    @GetMapping("/cart/{cartId}")
-    public ResponseEntity<?> getItemsByCart(@PathVariable Long cartId) {
-        Optional<BuildCart> cartOpt = buildCartService.getCartById(cartId);
-        if (cartOpt.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body("Build cart with ID " + cartId + " not found.");
-        }
-
-        List<CartItem> items = cartItemService.getItemsByCart(cartOpt.get());
-        List<CartItemResponse> responses = items.stream()
+    @GetMapping("/{id}")
+    public ResponseEntity<CartItemResponse> getItemById(@PathVariable Long id) {
+        return cartItemService.getItemById(id)
                 .map(this::toResponse)
-                .collect(Collectors.toList());
-
-        return ResponseEntity.ok(responses);
+                .map(ResponseEntity::ok)
+                .orElseThrow(() -> new ResourceNotFoundException("Cart item with ID " + id + " not found"));
     }
 
     @PostMapping
-    public ResponseEntity<?> createItem(@RequestBody CartItemRequest request) {
-        if (request.quantity() == null || request.quantity() <= 0) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body("Quantity must be a positive integer.");
-        }
-        Optional<BuildCart> cartOpt = buildCartService.getCartById(request.cartId());
-        if (cartOpt.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body("Invalid cart ID: " + request.cartId());
-        }
-        Optional<Component> compOpt = componentService.findEntityById(request.componentId());
-        if (compOpt.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body("Invalid component ID: " + request.componentId());
-        }
-        CartItem item = new CartItem();
-        item.setCart(cartOpt.get());
-        item.setComponent(compOpt.get());
-        item.setQuantity(request.quantity());
-        CartItem saved = cartItemService.saveItem(item);
+    public ResponseEntity<CartItemResponse> createItem(@Valid @RequestBody CartItemRequest request) {
+        CartItem cartItem = toEntity(request);
+        CartItem saved = cartItemService.saveItem(cartItem);
         return ResponseEntity.status(HttpStatus.CREATED).body(toResponse(saved));
     }
 
-
     @PutMapping("/{id}")
-    public ResponseEntity<?> updateQuantity(@PathVariable Long id, @RequestBody CartItemUpdate update) {
-        if (update.quantity() == null || update.quantity() <= 0) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body("Quantity must be a positive integer.");
-        }
-
-        Optional<CartItem> updatedOpt = cartItemService.updateQuantity(id, update.quantity());
-        if (updatedOpt.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body("Cart item with ID " + id + " not found.");
-        }
-
-        return ResponseEntity.ok(toResponse(updatedOpt.get()));
+    public ResponseEntity<CartItemResponse> updateQuantity(@PathVariable Long id,
+                                                           @Valid @RequestBody CartItemUpdate update) {
+        return cartItemService.updateQuantity(id, update.quantity())
+                .map(this::toResponse)
+                .map(ResponseEntity::ok)
+                .orElseThrow(() -> new ResourceNotFoundException("Cart item with ID " + id + " not found"));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<?> deleteItem(@PathVariable Long id) {
-        Optional<CartItem> existing = cartItemService.getItemById(id);
-        if (existing.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body("Cart item with ID " + id + " not found.");
+    public ResponseEntity<Void> deleteItem(@PathVariable Long id) {
+        if (cartItemService.getItemById(id).isEmpty()) {
+            throw new ResourceNotFoundException("Cart item with ID " + id + " not found");
         }
-
         cartItemService.deleteItem(id);
         return ResponseEntity.noContent().build();
     }
 
-    private CartItemResponse toResponse(CartItem item) {
+    // Helper methods for DTO conversion
+    private CartItemResponse toResponse(CartItem cartItem) {
         return new CartItemResponse(
-                item.getId(),
-                item.getCart().getId(),
-                item.getComponent().getId(),
-                item.getComponent().getName(),
-                item.getQuantity(),
-                item.getCreatedAt(),
-                item.getUpdatedAt()
+                cartItem.getId(),
+                cartItem.getCart().getId(),
+                cartItem.getComponent().getId(),
+                cartItem.getComponent().getName(),
+                cartItem.getQuantity(),
+                cartItem.getCreatedAt(),
+                cartItem.getUpdatedAt()
         );
+    }
+
+    private CartItem toEntity(CartItemRequest request) {
+        CartItem cartItem = new CartItem();
+
+        // Fetch and set the cart - throw exception if not found
+        BuildCart cart = buildCartService.getCartById(request.cartId())
+                .orElseThrow(() -> new ResourceNotFoundException("Cart with ID " + request.cartId() + " not found"));
+        cartItem.setCart(cart);
+
+        // Fetch and set the component - throw exception if not found
+        Component component = componentService.findEntityById(request.componentId())
+                .orElseThrow(() -> new ResourceNotFoundException("Component with ID " + request.componentId() + " not found"));
+        cartItem.setComponent(component);
+
+        cartItem.setQuantity(request.quantity());
+
+        return cartItem;
     }
 }
