@@ -11,6 +11,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 @RestController
@@ -63,5 +64,44 @@ public class ComponentController {
         }
         componentService.deleteComponent(id);
         return ResponseEntity.ok(new MessageResponse("Component with ID " + id + " deleted successfully"));
+    }
+
+    // Additional new endpoints
+
+    @GetMapping("/brand/{brand}")
+    public ResponseEntity<List<ComponentResponse>> getComponentsByBrand(@PathVariable String brand) {
+        List<ComponentResponse> components = componentService.getComponentsByBrand(brand);
+        return ResponseEntity.ok(components);
+    }
+
+    @GetMapping("/socket/{socket}")
+    public ResponseEntity<List<ComponentResponse>> getComponentsBySocket(@PathVariable String socket) {
+        List<ComponentResponse> components = componentService.getComponentsBySocket(socket);
+        return ResponseEntity.ok(components);
+    }
+
+    @GetMapping("/compatibility/{tag}")
+    public ResponseEntity<List<ComponentResponse>> getComponentsByCompatibilityTag(@PathVariable String tag) {
+        List<ComponentResponse> components = componentService.getComponentsByCompatibilityTag(tag);
+        return ResponseEntity.ok(components);
+    }
+
+    @GetMapping("/search")
+    public ResponseEntity<List<ComponentResponse>> searchComponents(
+            @RequestParam(required = false) ComponentType type,
+            @RequestParam(required = false) String brand,
+            @RequestParam(required = false) String socket,
+            @RequestParam(required = false) BigDecimal maxPrice,
+            @RequestParam(defaultValue = "0") Integer minStock) {
+
+        List<ComponentResponse> components = componentService.searchComponents(type, brand, socket, maxPrice, minStock);
+        return ResponseEntity.ok(components);
+    }
+
+    @GetMapping("/in-stock")
+    public ResponseEntity<List<ComponentResponse>> getComponentsInStock(
+            @RequestParam(defaultValue = "0") Integer minQuantity) {
+        List<ComponentResponse> components = componentService.getComponentsInStock(minQuantity);
+        return ResponseEntity.ok(components);
     }
 }

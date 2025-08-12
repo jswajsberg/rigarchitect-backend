@@ -7,10 +7,14 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 
 import java.math.BigDecimal;
+import java.util.Map;
 
 public record ComponentRequest(
         @NotBlank(message = "Name is required")
         String name,
+
+        @NotBlank(message = "Brand is required")
+        String brand,
 
         @NotNull(message = "Type is required")
         ComponentType type,
@@ -26,10 +30,27 @@ public record ComponentRequest(
         @Min(value = 0, message = "Stock quantity must be zero or greater")
         Integer stockQuantity,
 
-        String socket,  // optional
+        // Optional compatibility fields
+        String socket,
 
-        String ramType, // optional
+        String ramType,
 
         @Min(value = 0, message = "Wattage cannot be negative")
-        Integer wattage  // optional but if present can't be negative
+        Integer wattage,
+
+        String formFactor,
+
+        @Min(value = 0, message = "GPU length cannot be negative")
+        Integer gpuLengthMm,
+
+        @Min(value = 0, message = "Cooler height cannot be negative")
+        Integer coolerHeightMm,
+
+        String psuFormFactor,
+
+        @Min(value = 0, message = "PCI slots required cannot be negative")
+        Integer pciSlotsRequired,
+
+        // Flexible JSON field for additional compatibility data
+        Map<String, Object> extraCompatibility
 ) {}
