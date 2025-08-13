@@ -1,15 +1,18 @@
 package com.rigarchitect.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.rigarchitect.model.enums.ComponentType;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.Check;
+import org.hibernate.annotations.ColumnDefault;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -21,7 +24,8 @@ import java.util.Map;
 @Getter
 @Setter
 @NoArgsConstructor
-public class Component {
+@Check(constraints = "price >= 0 AND stock_quantity >= 0") // DB-level checks
+public class Component extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -33,7 +37,6 @@ public class Component {
     @Column(nullable = false, length = 50)
     private String brand;
 
-    // Store enum as a string in DB (e.g., "CPU", "GPU")
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private ComponentType type;
@@ -41,13 +44,20 @@ public class Component {
     @Column(name = "compatibility_tag", nullable = false, length = 50)
     private String compatibilityTag;
 
+    // Using precision + scale for money values
     @Column(nullable = false, precision = 10, scale = 2)
-    private BigDecimal price;
+    private BigDecimal price = BigDecimal.ZERO;
 
     @Column(name = "stock_quantity", nullable = false)
+    @ColumnDefault("0") // DB-level default for safety
     private Integer stockQuantity = 0;
 
-    // Optional fields — can be null
+    // Ignore this field during JSON serialization to prevent circular reference
+    @OneToMany(mappedBy = "component", fetch = FetchType.LAZY)
+    @JsonIgnore
+    private List<CartItem> cartItems;
+
+    // Optional compatibility fields
     @Column(length = 20)
     private String socket;
 
@@ -71,26 +81,8 @@ public class Component {
     @Column(name = "pci_slots_required")
     private Integer pciSlotsRequired;
 
-    // JSONB field for flexible compatibility data
+    // JSONB for flexible extra compatibility info (PostgreSQL-specific)
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "extra_compatibility", columnDefinition = "jsonb")
     private Map<String, Object> extraCompatibility;
-
-    @Column(name = "created_at", nullable = false, updatable = false)
-    private LocalDateTime createdAt;
-
-    @Column(name = "updated_at", nullable = false)
-    private LocalDateTime updatedAt;
-
-    // Automatically set timestamps before persisting or updating
-    @PrePersist
-    protected void onCreate() {
-        createdAt = LocalDateTime.now();
-        updatedAt = createdAt;
-    }
-
-    @PreUpdate
-    protected void onUpdate() {
-        updatedAt = LocalDateTime.now();
-    }
 }

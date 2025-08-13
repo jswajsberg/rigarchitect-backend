@@ -2,7 +2,7 @@ package com.rigarchitect.service;
 
 import com.rigarchitect.model.BuildCart;
 import com.rigarchitect.model.User;
-import com.rigarchitect.model.enums.CartStatus;
+import com.rigarchitect.model.enums.BuildStatus;
 import com.rigarchitect.repository.BuildCartRepository;
 import com.rigarchitect.repository.UserRepository;
 import jakarta.transaction.Transactional;
@@ -28,7 +28,7 @@ public class BuildCartService {
         return buildCartRepository.findByUser(user);
     }
 
-    public Optional<BuildCart> getCartByUserAndStatus(User user, CartStatus status) {
+    public Optional<BuildCart> getCartByUserAndStatus(User user, BuildStatus status) {
         return buildCartRepository.findFirstByUserAndStatus(user, status);
     }
 
@@ -37,6 +37,8 @@ public class BuildCartService {
     }
 
     public BuildCart saveCart(BuildCart buildCart) {
+        // Ensure the totalPrice is always accurate
+        buildCart.recalculateTotalPrice();
         return buildCartRepository.save(buildCart);
     }
 
@@ -48,48 +50,32 @@ public class BuildCartService {
     public void finalizeCartById(Long cartId) {
         BuildCart cart = findCartOrThrow(cartId);
 
-        validateCartForFinalization(cart);
+        if (cart.getStatus() != BuildStatus.ACTIVE) {
+            throw new IllegalStateException("Only active carts can be finalized.");
+        }
 
-        BigDecimal totalCost = calculateTotalCost(cart);
+        // Recalculate totalPrice in the entity
+        cart.recalculateTotalPrice();
+        BigDecimal totalCost = cart.getTotalPrice();
 
         User user = cart.getUser();
         if (user.getBudget().compareTo(totalCost) < 0) {
             throw new IllegalStateException("Insufficient funds to finalize the cart.");
         }
 
-        applyFinalization(cart, user, totalCost);
+        // Apply finalization
+        user.setBudget(user.getBudget().subtract(totalCost));
+        cart.setStatus(BuildStatus.FINALIZED);
+        cart.setFinalizedAt(LocalDateTime.now());
+
+        // Persist changes
+        userRepository.save(user);
+        buildCartRepository.save(cart);
     }
 
     // --- Private Helper Methods ---
-
     private BuildCart findCartOrThrow(Long cartId) {
         return buildCartRepository.findById(cartId)
                 .orElseThrow(() -> new IllegalArgumentException("Cart not found with id: " + cartId));
-    }
-
-    private void validateCartForFinalization(BuildCart cart) {
-        if (cart.getStatus() != CartStatus.ACTIVE) {
-            throw new IllegalStateException("Only active carts can be finalized.");
-        }
-    }
-
-    private BigDecimal calculateTotalCost(BuildCart cart) {
-        return cart.getCartItems().stream()
-                .map(item -> {
-                    if (item.getComponent() == null || item.getComponent().getPrice() == null) {
-                        return BigDecimal.ZERO;
-                    }
-                    return item.getComponent().getPrice().multiply(BigDecimal.valueOf(item.getQuantity()));
-                })
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-    }
-
-    private void applyFinalization(BuildCart cart, User user, BigDecimal totalCost) {
-        user.setBudget(user.getBudget().subtract(totalCost));
-        cart.setStatus(CartStatus.FINALIZED);
-        cart.setFinalizedAt(LocalDateTime.now());
-
-        userRepository.save(user);
-        buildCartRepository.save(cart);
     }
 }

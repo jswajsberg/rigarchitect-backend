@@ -1,11 +1,12 @@
 package com.rigarchitect.model;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
+import jakarta.validation.constraints.Min;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-
-import java.time.LocalDateTime;
+import org.hibernate.annotations.Check;
 
 /**
  * Entity class representing an item inside a build cart.
@@ -18,7 +19,8 @@ import java.time.LocalDateTime;
 @Getter
 @Setter
 @NoArgsConstructor
-public class CartItem {
+@Check(constraints = "quantity >= 1") // DB-level check to ensure quantity is always >= 1
+public class CartItem extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -27,31 +29,42 @@ public class CartItem {
     // Many CartItems belong to one BuildCart
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "cart_id", nullable = false)
+    @JsonBackReference("cart-items")
     private BuildCart buildCart;
 
     // Many CartItems reference one Component
-    @ManyToOne(fetch = FetchType.EAGER)
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "component_id", nullable = false)
     private Component component;
 
     @Column(nullable = false)
+    @Min(1) // Hibernate validation: quantity must be >= 1
     private Integer quantity;
 
-    @Column(name = "created_at", nullable = false, updatable = false)
-    private LocalDateTime createdAt;
-
-    @Column(name = "updated_at", nullable = false)
-    private LocalDateTime updatedAt;
-
-    // Lifecycle callbacks for timestamps
-    @PrePersist
-    protected void onCreate() {
-        createdAt = LocalDateTime.now();
-        updatedAt = createdAt;
+    /**
+     * Convenience method to get the build cart ID without triggering lazy loading of the entire BuildCart entity.
+     *
+     * @return the build cart ID if buildCart is set, null otherwise
+     */
+    public Long getBuildCartId() {
+        return buildCart != null ? buildCart.getId() : null;
     }
 
-    @PreUpdate
-    protected void onUpdate() {
-        updatedAt = LocalDateTime.now();
+    /**
+     * Convenience method to get the component ID without triggering lazy loading of the entire Component entity.
+     *
+     * @return the component ID if component is set, null otherwise
+     */
+    public Long getComponentId() {
+        return component != null ? component.getId() : null;
+    }
+
+    /**
+     * Convenience method to get the component name.
+     *
+     * @return the component name if a component is set, null otherwise
+     */
+    public String getComponentName() {
+        return component != null ? component.getName() : null;
     }
 }

@@ -1,23 +1,17 @@
 package com.rigarchitect.dto.buildcart;
 
-import com.rigarchitect.model.enums.CartStatus;
-import jakarta.validation.constraints.DecimalMin;
+import com.rigarchitect.model.enums.BuildStatus;
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 
-import java.math.BigDecimal;
-
+@Schema(description = "Request DTO for creating or updating a build cart")
 public record BuildCartRequest(
-//        @NotNull(message = "User ID is required")
-//        Long userId,
-
+        @Schema(description = "Name of the build cart", required = true, example = "My Gaming Rig")
         @NotBlank(message = "Name is required")
         String name,
 
+        @Schema(description = "Status of the build cart", required = true, example = "ACTIVE")
         @NotNull(message = "Status is required")
-        CartStatus status,
-
-        @NotNull(message = "Total price is required")
-        @DecimalMin(value = "0.0", message = "Total price must be zero or positive")
-        BigDecimal totalPrice
+        BuildStatus status
 ) {}

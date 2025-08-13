@@ -1,6 +1,8 @@
 package com.rigarchitect.model;
 
-import com.rigarchitect.model.enums.CartStatus;
+import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
+import com.rigarchitect.model.enums.BuildStatus;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -20,7 +22,7 @@ import java.util.List;
 @Getter
 @Setter
 @NoArgsConstructor
-public class BuildCart {
+public class BuildCart extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -29,6 +31,7 @@ public class BuildCart {
     // Many carts belong to one user
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
+    @JsonBackReference("user-carts")
     private User user;
 
     @Column(length = 100)
@@ -36,32 +39,55 @@ public class BuildCart {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private CartStatus status = CartStatus.ACTIVE;
+    private BuildStatus status = BuildStatus.ACTIVE;
 
     @Column(name = "total_price", nullable = false, precision = 10, scale = 2)
     private BigDecimal totalPrice = BigDecimal.ZERO;
 
-    @OneToMany(mappedBy = "buildCart", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "buildCart", cascade = CascadeType.ALL, fetch = FetchType.LAZY, orphanRemoval = true)
+    @JsonManagedReference("cart-items")
     private List<CartItem> cartItems = new ArrayList<>();
-
-    @Column(name = "created_at", nullable = false, updatable = false)
-    private LocalDateTime createdAt;
-
-    @Column(name = "updated_at", nullable = false)
-    private LocalDateTime updatedAt;
 
     @Column(name = "finalized_at")
     private LocalDateTime finalizedAt;
 
-    // Automatically set timestamps before persisting or updating
-    @PrePersist
-    protected void onCreate() {
-        createdAt = LocalDateTime.now();
-        updatedAt = createdAt;
+    /**
+     * Convenience method to get the user ID without triggering lazy loading of the entire User entity.
+     *
+     * @return the user ID if user is set, null otherwise
+     */
+    public Long getUserId() {
+        return user != null ? user.getId() : null;
     }
 
-    @PreUpdate
-    protected void onUpdate() {
-        updatedAt = LocalDateTime.now();
+    /**
+     * Adds a CartItem to this build cart and updates totalPrice.
+     *
+     * @param item the CartItem to add
+     */
+    public void addCartItem(CartItem item) {
+        cartItems.add(item);
+        item.setBuildCart(this);
+        recalculateTotalPrice();
+    }
+
+    /**
+     * Removes a CartItem from this build cart and updates totalPrice.
+     *
+     * @param item the CartItem to remove
+     */
+    public void removeCartItem(CartItem item) {
+        cartItems.remove(item);
+        item.setBuildCart(null);
+        recalculateTotalPrice();
+    }
+
+    /**
+     * Recalculates totalPrice based on the current cartItems.
+     */
+    public void recalculateTotalPrice() {
+        totalPrice = cartItems.stream()
+                .map(i -> i.getComponent().getPrice().multiply(BigDecimal.valueOf(i.getQuantity())))
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 }

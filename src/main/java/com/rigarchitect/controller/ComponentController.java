@@ -6,6 +6,10 @@ import com.rigarchitect.dto.component.ComponentResponse;
 import com.rigarchitect.exception.ResourceNotFoundException;
 import com.rigarchitect.model.enums.ComponentType;
 import com.rigarchitect.service.ComponentService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -16,6 +20,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/components")
+@CrossOrigin(origins = "http://localhost:3000")
 public class ComponentController {
 
     private final ComponentService componentService;
@@ -24,41 +29,80 @@ public class ComponentController {
         this.componentService = componentService;
     }
 
+    @Operation(summary = "Get all components", description = "Retrieve all components in the catalog")
+    @ApiResponse(responseCode = "200", description = "List of all components")
     @GetMapping
     public ResponseEntity<List<ComponentResponse>> getAllComponents() {
         List<ComponentResponse> components = componentService.getAllComponents();
         return ResponseEntity.ok(components);
     }
 
+    @Operation(summary = "Get components by type", description = "Retrieve all components of a specific type")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Components retrieved successfully")
+    })
     @GetMapping("/type/{type}")
-    public ResponseEntity<List<ComponentResponse>> getComponentsByType(@PathVariable ComponentType type) {
+    public ResponseEntity<List<ComponentResponse>> getComponentsByType(
+            @Parameter(description = "Type of component to filter by", required = true)
+            @PathVariable ComponentType type) {
+
         List<ComponentResponse> components = componentService.getComponentsByType(type);
         return ResponseEntity.ok(components);
     }
 
+    @Operation(summary = "Get a component by ID", description = "Retrieve a single component using its ID")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Component retrieved successfully"),
+            @ApiResponse(responseCode = "404", description = "Component not found")
+    })
     @GetMapping("/{id}")
-    public ResponseEntity<ComponentResponse> getComponentById(@PathVariable Long id) {
+    public ResponseEntity<ComponentResponse> getComponentById(
+            @Parameter(description = "ID of the component", required = true)
+            @PathVariable Long id) {
+
         return componentService.getComponentById(id)
                 .map(ResponseEntity::ok)
                 .orElseThrow(() -> new ResourceNotFoundException("Component with ID " + id + " not found"));
     }
 
+    @Operation(summary = "Create a new component", description = "Add a new component to the catalog")
+    @ApiResponses({
+            @ApiResponse(responseCode = "201", description = "Component created successfully")
+    })
     @PostMapping
-    public ResponseEntity<ComponentResponse> createComponent(@Valid @RequestBody ComponentRequest request) {
+    public ResponseEntity<ComponentResponse> createComponent(
+            @Valid @RequestBody ComponentRequest request) {
+
         ComponentResponse saved = componentService.createComponent(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(saved);
     }
 
+    @Operation(summary = "Update a component", description = "Update an existing component by ID")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Component updated successfully"),
+            @ApiResponse(responseCode = "404", description = "Component not found")
+    })
     @PutMapping("/{id}")
-    public ResponseEntity<ComponentResponse> updateComponent(@PathVariable Long id,
-                                                             @Valid @RequestBody ComponentRequest request) {
+    public ResponseEntity<ComponentResponse> updateComponent(
+            @Parameter(description = "ID of the component to update", required = true)
+            @PathVariable Long id,
+            @Valid @RequestBody ComponentRequest request) {
+
         return componentService.updateComponent(id, request)
                 .map(ResponseEntity::ok)
                 .orElseThrow(() -> new ResourceNotFoundException("Component with ID " + id + " not found"));
     }
 
+    @Operation(summary = "Delete a component", description = "Delete a component by ID")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Component deleted successfully"),
+            @ApiResponse(responseCode = "404", description = "Component not found")
+    })
     @DeleteMapping("/{id}")
-    public ResponseEntity<MessageResponse> deleteComponent(@PathVariable Long id) {
+    public ResponseEntity<MessageResponse> deleteComponent(
+            @Parameter(description = "ID of the component to delete", required = true)
+            @PathVariable Long id) {
+
         if (componentService.getComponentById(id).isEmpty()) {
             throw new ResourceNotFoundException("Component with ID " + id + " not found");
         }
@@ -66,41 +110,56 @@ public class ComponentController {
         return ResponseEntity.ok(new MessageResponse("Component with ID " + id + " deleted successfully"));
     }
 
-    // Additional new endpoints
+    // --- Additional endpoints ---
 
+    @Operation(summary = "Get components by brand", description = "Retrieve components filtered by brand")
     @GetMapping("/brand/{brand}")
-    public ResponseEntity<List<ComponentResponse>> getComponentsByBrand(@PathVariable String brand) {
+    public ResponseEntity<List<ComponentResponse>> getComponentsByBrand(
+            @Parameter(description = "Brand name to filter by", required = true)
+            @PathVariable String brand) {
+
         List<ComponentResponse> components = componentService.getComponentsByBrand(brand);
         return ResponseEntity.ok(components);
     }
 
+    @Operation(summary = "Get components by socket", description = "Retrieve components filtered by socket")
     @GetMapping("/socket/{socket}")
-    public ResponseEntity<List<ComponentResponse>> getComponentsBySocket(@PathVariable String socket) {
+    public ResponseEntity<List<ComponentResponse>> getComponentsBySocket(
+            @Parameter(description = "Socket type to filter by", required = true)
+            @PathVariable String socket) {
+
         List<ComponentResponse> components = componentService.getComponentsBySocket(socket);
         return ResponseEntity.ok(components);
     }
 
+    @Operation(summary = "Get components by compatibility tag", description = "Retrieve components filtered by compatibility tag")
     @GetMapping("/compatibility/{tag}")
-    public ResponseEntity<List<ComponentResponse>> getComponentsByCompatibilityTag(@PathVariable String tag) {
+    public ResponseEntity<List<ComponentResponse>> getComponentsByCompatibilityTag(
+            @Parameter(description = "Compatibility tag to filter by", required = true)
+            @PathVariable String tag) {
+
         List<ComponentResponse> components = componentService.getComponentsByCompatibilityTag(tag);
         return ResponseEntity.ok(components);
     }
 
+    @Operation(summary = "Search components", description = "Search components using multiple optional filters")
     @GetMapping("/search")
     public ResponseEntity<List<ComponentResponse>> searchComponents(
-            @RequestParam(required = false) ComponentType type,
-            @RequestParam(required = false) String brand,
-            @RequestParam(required = false) String socket,
-            @RequestParam(required = false) BigDecimal maxPrice,
-            @RequestParam(defaultValue = "0") Integer minStock) {
+            @Parameter(description = "Type filter") @RequestParam(required = false) ComponentType type,
+            @Parameter(description = "Brand filter") @RequestParam(required = false) String brand,
+            @Parameter(description = "Socket filter") @RequestParam(required = false) String socket,
+            @Parameter(description = "Maximum price filter") @RequestParam(required = false) BigDecimal maxPrice,
+            @Parameter(description = "Minimum stock filter") @RequestParam(defaultValue = "0") Integer minStock) {
 
         List<ComponentResponse> components = componentService.searchComponents(type, brand, socket, maxPrice, minStock);
         return ResponseEntity.ok(components);
     }
 
+    @Operation(summary = "Get components in stock", description = "Retrieve components with at least minQuantity in stock")
     @GetMapping("/in-stock")
     public ResponseEntity<List<ComponentResponse>> getComponentsInStock(
-            @RequestParam(defaultValue = "0") Integer minQuantity) {
+            @Parameter(description = "Minimum quantity in stock") @RequestParam(defaultValue = "0") Integer minQuantity) {
+
         List<ComponentResponse> components = componentService.getComponentsInStock(minQuantity);
         return ResponseEntity.ok(components);
     }
