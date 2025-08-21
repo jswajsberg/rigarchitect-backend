@@ -20,7 +20,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/components")
-@CrossOrigin(origins = "http://localhost:3000")
+@CrossOrigin(origins = "http://localhost:5173")
 public class ComponentController {
 
     private final ComponentService componentService;
@@ -109,8 +109,6 @@ public class ComponentController {
         componentService.deleteComponent(id);
         return ResponseEntity.ok(new MessageResponse("Component with ID " + id + " deleted successfully"));
     }
-
-    // --- Additional endpoints ---
 
     @Operation(summary = "Get components by brand", description = "Retrieve components filtered by brand")
     @GetMapping("/brand/{brand}")
