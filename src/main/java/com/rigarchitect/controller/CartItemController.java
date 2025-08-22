@@ -16,9 +16,14 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import jakarta.validation.Valid;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+import java.util.Optional;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/v1/items")
@@ -53,6 +58,27 @@ public class CartItemController {
                 .orElseThrow(() -> new ResourceNotFoundException("Cart item with ID " + id + " not found"));
     }
 
+    @Operation(summary = "Get all items in a cart", description = "Retrieve all items in a specific cart")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Cart items retrieved successfully"),
+            @ApiResponse(responseCode = "404", description = "Cart not found")
+    })
+    @GetMapping("/cart/{cartId}")
+    public ResponseEntity<List<CartItemResponse>> getItemsByCart(
+            @Parameter(description = "ID of the cart", required = true)
+            @PathVariable Long cartId) {
+
+        BuildCart cart = buildCartService.getCartById(cartId)
+                .orElseThrow(() -> new ResourceNotFoundException("Cart with ID " + cartId + " not found"));
+
+        List<CartItemResponse> items = cartItemService.getItemsByCart(cart)
+                .stream()
+                .map(this::toResponse)
+                .collect(Collectors.toList());
+
+        return ResponseEntity.ok(items);
+    }
+
     @Operation(summary = "Create a new cart item", description = "Add a new item to a build cart")
     @ApiResponses({
             @ApiResponse(responseCode = "201", description = "Cart item created successfully"),
@@ -62,9 +88,46 @@ public class CartItemController {
     public ResponseEntity<CartItemResponse> createItem(
             @Valid @RequestBody CartItemRequest request) {
 
-        CartItem cartItem = toEntity(request);
-        CartItem saved = cartItemService.saveItem(cartItem);
-        return ResponseEntity.status(HttpStatus.CREATED).body(toResponse(saved));
+        try {
+            // First, check if this component is already in the cart
+            BuildCart buildCart = buildCartService.getCartById(request.cartId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Cart with ID " + request.cartId() + " not found"));
+
+            // Look for existing cart item with same component
+            Optional<CartItem> existingItem = cartItemService.findByCartAndComponent(buildCart, request.componentId());
+
+            if (existingItem.isPresent()) {
+                // Update quantity of existing item
+                CartItem existing = existingItem.get();
+                int newQuantity = existing.getQuantity() + request.quantity();
+
+                CartItem updated = cartItemService.updateQuantity(existing.getId(), newQuantity)
+                        .orElseThrow(() -> new ResourceNotFoundException("Failed to update cart item"));
+
+                return ResponseEntity.ok(toResponse(updated));
+            } else {
+                // Create new item
+                CartItem cartItem = toEntity(request);
+                CartItem saved = cartItemService.saveItem(cartItem);
+                return ResponseEntity.status(HttpStatus.CREATED).body(toResponse(saved));
+            }
+
+        } catch (DataIntegrityViolationException e) {
+            // Handle race condition where item was added between check and insert
+            if (e.getMessage().contains("unique_cart_component")) {
+                // Try to update the quantity instead
+                BuildCart buildCart = buildCartService.getCartById(request.cartId()).get();
+                Optional<CartItem> existingItem = cartItemService.findByCartAndComponent(buildCart, request.componentId());
+
+                if (existingItem.isPresent()) {
+                    CartItem existing = existingItem.get();
+                    int newQuantity = existing.getQuantity() + request.quantity();
+                    CartItem updated = cartItemService.updateQuantity(existing.getId(), newQuantity).get();
+                    return ResponseEntity.ok(toResponse(updated));
+                }
+            }
+            throw e; // Re-throw if it's a different constraint violation
+        }
     }
 
     @Operation(summary = "Update quantity of a cart item", description = "Update the quantity of an existing cart item")
@@ -90,15 +153,12 @@ public class CartItemController {
             @ApiResponse(responseCode = "404", description = "Cart item not found")
     })
     @DeleteMapping("/{id}")
-    public ResponseEntity<MessageResponse> deleteItem(
-            @Parameter(description = "ID of the cart item to delete", required = true)
-            @PathVariable Long id) {
-
+    public ResponseEntity<MessageResponse> deleteItem(@PathVariable Long id) {
         if (cartItemService.getItemById(id).isEmpty()) {
             throw new ResourceNotFoundException("Cart item with ID " + id + " not found");
         }
         cartItemService.deleteItem(id);
-        return ResponseEntity.ok(new MessageResponse("Cart with ID " + id + " deleted successfully"));
+        return ResponseEntity.ok(new MessageResponse("Cart item deleted successfully"));
     }
 
     // --- Helper methods ---

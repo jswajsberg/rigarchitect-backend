@@ -86,8 +86,18 @@ public class BuildCart extends BaseEntity {
      * Recalculates totalPrice based on the current cartItems.
      */
     public void recalculateTotalPrice() {
+        // Make sure cartItems are loaded
+        if (cartItems == null) {
+            totalPrice = BigDecimal.ZERO;
+            return;
+        }
+
         totalPrice = cartItems.stream()
-                .map(i -> i.getComponent().getPrice().multiply(BigDecimal.valueOf(i.getQuantity())))
+                .map(item -> {
+                    BigDecimal itemPrice = item.getComponent().getPrice();
+                    BigDecimal quantity = BigDecimal.valueOf(item.getQuantity());
+                    return itemPrice.multiply(quantity);
+                })
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 }
