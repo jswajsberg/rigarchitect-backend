@@ -23,7 +23,6 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/v1/items")
@@ -74,7 +73,7 @@ public class CartItemController {
         List<CartItemResponse> items = cartItemService.getItemsByCart(cart)
                 .stream()
                 .map(this::toResponse)
-                .collect(Collectors.toList());
+                .toList();
 
         return ResponseEntity.ok(items);
     }
@@ -93,7 +92,7 @@ public class CartItemController {
             BuildCart buildCart = buildCartService.getCartById(request.cartId())
                     .orElseThrow(() -> new ResourceNotFoundException("Cart with ID " + request.cartId() + " not found"));
 
-            // Look for existing cart item with same component
+            // Look for existing cart item with the same component
             Optional<CartItem> existingItem = cartItemService.findByCartAndComponent(buildCart, request.componentId());
 
             if (existingItem.isPresent()) {
@@ -106,23 +105,25 @@ public class CartItemController {
 
                 return ResponseEntity.ok(toResponse(updated));
             } else {
-                // Create new item
+                // Create a new item
                 CartItem cartItem = toEntity(request);
                 CartItem saved = cartItemService.saveItem(cartItem);
                 return ResponseEntity.status(HttpStatus.CREATED).body(toResponse(saved));
             }
 
         } catch (DataIntegrityViolationException e) {
-            // Handle race condition where item was added between check and insert
+            // Handle race condition where an item was added between check and insert
             if (e.getMessage().contains("unique_cart_component")) {
                 // Try to update the quantity instead
-                BuildCart buildCart = buildCartService.getCartById(request.cartId()).get();
+                BuildCart buildCart = buildCartService.getCartById(request.cartId())
+                        .orElseThrow(() -> new ResourceNotFoundException("Cart with ID " + request.cartId() + " not found"));
                 Optional<CartItem> existingItem = cartItemService.findByCartAndComponent(buildCart, request.componentId());
 
                 if (existingItem.isPresent()) {
                     CartItem existing = existingItem.get();
                     int newQuantity = existing.getQuantity() + request.quantity();
-                    CartItem updated = cartItemService.updateQuantity(existing.getId(), newQuantity).get();
+                    CartItem updated = cartItemService.updateQuantity(existing.getId(), newQuantity)
+                            .orElseThrow(() -> new ResourceNotFoundException("Failed to update cart item"));
                     return ResponseEntity.ok(toResponse(updated));
                 }
             }

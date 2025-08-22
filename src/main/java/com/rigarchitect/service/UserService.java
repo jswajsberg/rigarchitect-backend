@@ -6,7 +6,10 @@ import com.rigarchitect.model.User;
 import com.rigarchitect.repository.UserRepository;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
+import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 public class UserService {
@@ -26,6 +29,26 @@ public class UserService {
         return userRepository.findById(id).map(this::toResponse);
     }
 
+    // NEW: Get all users for selection
+    public List<UserResponse> getAllUsers() {
+        return userRepository.findAll()
+                .stream()
+                .map(this::toResponse)
+                .collect(Collectors.toList());
+    }
+
+    // NEW: Get the current user (hardcoded to first user for now, easily replaceable with auth later)
+    public Optional<UserResponse> getCurrentUser() {
+        List<User> users = userRepository.findAll();
+        if (users.isEmpty()) {
+            return Optional.empty();
+        }
+        // For now, return the first user. This will be replaced with authenticated user later
+        return Optional.of(toResponse(users.get(0)));
+    }
+
+
+
     public UserResponse createUser(UserRequest request) {
         User user = toEntity(request);
         User saved = userRepository.save(user);
@@ -37,13 +60,28 @@ public class UserService {
                 .map(existing -> {
                     existing.setEmail(request.email());
                     existing.setName(request.name());
-                    // add other updatable fields
+                    existing.setBudget(request.budget());
+                    return toResponse(userRepository.save(existing));
+                });
+    }
+
+    // NEW: Update just the budget (useful for cart operations)
+    public Optional<UserResponse> updateUserBudget(Long id, BigDecimal newBudget) {
+        return userRepository.findById(id)
+                .map(existing -> {
+                    existing.setBudget(newBudget);
                     return toResponse(userRepository.save(existing));
                 });
     }
 
     public void deleteUser(Long id) {
         userRepository.deleteById(id);
+    }
+
+    // NEW: Find user by email (useful for user lookup)
+    public Optional<UserResponse> getUserByEmail(String email) {
+        User user = userRepository.findByEmail(email);
+        return user != null ? Optional.of(toResponse(user)) : Optional.empty();
     }
 
     // --- DTO ↔ Entity mapping methods ---
@@ -54,8 +92,8 @@ public class UserService {
                 user.getName(),
                 user.getEmail(),
                 user.getBudget(),
-                user.getUpdatedAt(),
-                user.getCreatedAt()
+                user.getCreatedAt(),
+                user.getUpdatedAt()
         );
     }
 
@@ -64,6 +102,9 @@ public class UserService {
         user.setName(request.name());
         user.setEmail(request.email());
         user.setBudget(request.budget());
+        // For now, we'll set a placeholder password hash since the field is required
+        // This will be properly handled when we add authentication
+        user.setPasswordHash("placeholder_hash_" + System.currentTimeMillis());
         return user;
     }
 }

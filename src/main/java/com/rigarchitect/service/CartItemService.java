@@ -49,9 +49,9 @@ public class CartItemService {
 
             // Delete the item first
             cartItemRepository.deleteById(id);
-            cartItemRepository.flush(); // Force the delete to complete
+            cartItemRepository.flush(); // Force a delete action to complete
 
-            // Now get fresh cart and recalculate
+            // Now get a fresh cart and recalculate
             if (cartId != null) {
                 Optional<BuildCart> cartOpt = buildCartService.getCartById(cartId);
                 if (cartOpt.isPresent()) {
