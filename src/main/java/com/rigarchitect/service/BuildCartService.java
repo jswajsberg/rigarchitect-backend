@@ -9,6 +9,7 @@ import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -19,6 +20,10 @@ public class BuildCartService {
     private final BuildCartRepository buildCartRepository;
     private final UserRepository userRepository;
 
+    // Tax constants for Quebec, Canada
+    private static final BigDecimal GST_RATE = new BigDecimal("0.05"); // 5% Federal GST
+    private static final BigDecimal QST_RATE = new BigDecimal("0.09975"); // 9.975% Quebec Sales Tax
+
     public BuildCartService(BuildCartRepository buildCartRepository, UserRepository userRepository) {
         this.buildCartRepository = buildCartRepository;
         this.userRepository = userRepository;
@@ -26,10 +31,6 @@ public class BuildCartService {
 
     public List<BuildCart> getCartsByUser(User user) {
         return buildCartRepository.findByUser(user);
-    }
-
-    public Optional<BuildCart> getCartByUserAndStatus(User user, BuildStatus status) {
-        return buildCartRepository.findFirstByUserAndStatus(user, status);
     }
 
     public Optional<BuildCart> getCartById(Long id) {
@@ -50,21 +51,31 @@ public class BuildCartService {
     public void finalizeCartById(Long cartId) {
         BuildCart cart = findCartOrThrow(cartId);
 
-        if (cart.getStatus() != BuildStatus.ACTIVE) {
-            throw new IllegalStateException("Only active carts can be finalized.");
+        if (cart.getStatus() != BuildStatus.ACTIVE && cart.getStatus() != BuildStatus.DRAFT) {
+            throw new IllegalStateException("Only active or draft carts can be finalized.");
         }
 
         // Recalculate totalPrice in the entity
         cart.recalculateTotalPrice();
-        BigDecimal totalCost = cart.getTotalPrice();
+        BigDecimal subtotal = cart.getTotalPrice();
+
+        // Calculate taxes (same as frontend)
+        BigDecimal gst = subtotal.multiply(GST_RATE).setScale(2, RoundingMode.HALF_UP);
+        BigDecimal qst = subtotal.multiply(QST_RATE).setScale(2, RoundingMode.HALF_UP);
+        BigDecimal totalTax = gst.add(qst);
+        BigDecimal grandTotal = subtotal.add(totalTax);
 
         User user = cart.getUser();
-        if (user.getBudget().compareTo(totalCost) < 0) {
-            throw new IllegalStateException("Insufficient funds to finalize the cart.");
+        // Check budget against grand total (including taxes)
+        if (user.getBudget().compareTo(grandTotal) < 0) {
+            throw new IllegalStateException(
+                    String.format("Insufficient funds to finalize the cart. Required: $%.2f (including taxes), Available: $%.2f",
+                            grandTotal.doubleValue(), user.getBudget().doubleValue())
+            );
         }
 
-        // Apply finalization
-        user.setBudget(user.getBudget().subtract(totalCost));
+        // Deduct the grand total (including taxes) from a user's budget
+        user.setBudget(user.getBudget().subtract(grandTotal));
         cart.setStatus(BuildStatus.FINALIZED);
         cart.setFinalizedAt(LocalDateTime.now());
 
@@ -78,4 +89,5 @@ public class BuildCartService {
         return buildCartRepository.findById(cartId)
                 .orElseThrow(() -> new IllegalArgumentException("Cart not found with id: " + cartId));
     }
+
 }

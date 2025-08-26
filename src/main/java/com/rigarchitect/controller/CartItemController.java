@@ -88,11 +88,10 @@ public class CartItemController {
             @Valid @RequestBody CartItemRequest request) {
 
         try {
-            // First, check if this component is already in the cart
+            // Check if a component already exists in a cart
             BuildCart buildCart = buildCartService.getCartById(request.cartId())
                     .orElseThrow(() -> new ResourceNotFoundException("Cart with ID " + request.cartId() + " not found"));
 
-            // Look for existing cart item with the same component
             Optional<CartItem> existingItem = cartItemService.findByCartAndComponent(buildCart, request.componentId());
 
             if (existingItem.isPresent()) {
@@ -112,9 +111,8 @@ public class CartItemController {
             }
 
         } catch (DataIntegrityViolationException e) {
-            // Handle race condition where an item was added between check and insert
+            // Handle race condition
             if (e.getMessage().contains("unique_cart_component")) {
-                // Try to update the quantity instead
                 BuildCart buildCart = buildCartService.getCartById(request.cartId())
                         .orElseThrow(() -> new ResourceNotFoundException("Cart with ID " + request.cartId() + " not found"));
                 Optional<CartItem> existingItem = cartItemService.findByCartAndComponent(buildCart, request.componentId());
@@ -127,7 +125,7 @@ public class CartItemController {
                     return ResponseEntity.ok(toResponse(updated));
                 }
             }
-            throw e; // Re-throw if it's a different constraint violation
+            throw e;
         }
     }
 
@@ -162,8 +160,25 @@ public class CartItemController {
         return ResponseEntity.ok(new MessageResponse("Cart item deleted successfully"));
     }
 
-    // --- Helper methods ---
+    @Operation(summary = "Clear all items from cart", description = "Remove all items from a specific cart in one operation")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "All cart items removed successfully"),
+            @ApiResponse(responseCode = "404", description = "Cart not found")
+    })
+    @DeleteMapping("/cart/{cartId}/clear")
+    public ResponseEntity<MessageResponse> clearCart(
+            @Parameter(description = "ID of the cart to clear", required = true)
+            @PathVariable Long cartId) {
 
+        try {
+            cartItemService.deleteAllItemsInCart(cartId);
+            return ResponseEntity.ok(new MessageResponse("All items removed from cart successfully"));
+        } catch (IllegalArgumentException e) {
+            throw new ResourceNotFoundException(e.getMessage());
+        }
+    }
+
+    // Helper methods
     private CartItemResponse toResponse(CartItem cartItem) {
         return new CartItemResponse(
                 cartItem.getId(),

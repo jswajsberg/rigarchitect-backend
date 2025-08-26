@@ -13,7 +13,7 @@ import java.util.Optional;
 public class CartItemService {
 
     private final CartItemRepository cartItemRepository;
-    private final BuildCartService buildCartService; // Add this dependency
+    private final BuildCartService buildCartService;
 
     public CartItemService(CartItemRepository cartItemRepository, BuildCartService buildCartService) {
         this.cartItemRepository = cartItemRepository;
@@ -32,7 +32,7 @@ public class CartItemService {
     public CartItem saveItem(CartItem cartItem) {
         CartItem saved = cartItemRepository.save(cartItem);
 
-        // IMPORTANT: Recalculate and save cart total
+        // Recalculate and save cart total
         BuildCart cart = saved.getBuildCart();
         cart.recalculateTotalPrice();
         buildCartService.saveCart(cart);
@@ -42,16 +42,16 @@ public class CartItemService {
 
     @Transactional
     public void deleteItem(Long id) {
-        // Get the cart ID BEFORE deleting the item
+        // Get the cart ID before deleting the item
         Optional<CartItem> itemOpt = cartItemRepository.findById(id);
         if (itemOpt.isPresent()) {
             Long cartId = itemOpt.get().getBuildCartId();
 
-            // Delete the item first
+            // Delete the item
             cartItemRepository.deleteById(id);
-            cartItemRepository.flush(); // Force a delete action to complete
+            cartItemRepository.flush(); // Ensure deletion is complete
 
-            // Now get a fresh cart and recalculate
+            // Recalculate cart total
             if (cartId != null) {
                 Optional<BuildCart> cartOpt = buildCartService.getCartById(cartId);
                 if (cartOpt.isPresent()) {
@@ -63,13 +63,35 @@ public class CartItemService {
         }
     }
 
+    /**
+     * Remove all items from a cart in a single transaction
+     * @param cartId the ID of the cart to clear
+     */
+    @Transactional
+    public void deleteAllItemsInCart(Long cartId) {
+        // Verify cart exists first
+        Optional<BuildCart> cartOpt = buildCartService.getCartById(cartId);
+        if (cartOpt.isEmpty()) {
+            throw new IllegalArgumentException("Cart with ID " + cartId + " not found");
+        }
+
+        // Delete all items in the cart
+        cartItemRepository.deleteByBuildCartId(cartId);
+        cartItemRepository.flush(); // Ensure deletion completes
+
+        // Reset cart total to zero
+        BuildCart cart = cartOpt.get();
+        cart.recalculateTotalPrice(); // This will set the total to 0 since no items remain
+        buildCartService.saveCart(cart);
+    }
+
     @Transactional
     public Optional<CartItem> updateQuantity(Long itemId, int newQuantity) {
         return cartItemRepository.findById(itemId).map(item -> {
             item.setQuantity(newQuantity);
             CartItem updated = cartItemRepository.save(item);
 
-            // IMPORTANT: Recalculate and save cart total
+            // Recalculate and save cart total
             BuildCart cart = updated.getBuildCart();
             cart.recalculateTotalPrice();
             buildCartService.saveCart(cart);
@@ -78,7 +100,6 @@ public class CartItemService {
         });
     }
 
-    // Add the method for finding by cart and component
     public Optional<CartItem> findByCartAndComponent(BuildCart buildCart, Long componentId) {
         return cartItemRepository.findByBuildCartAndComponent_Id(buildCart, componentId);
     }
