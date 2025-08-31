@@ -68,5 +68,8 @@ public record ComponentRequest(
         Integer pciSlotsRequired,
 
         @Schema(description = "Flexible JSON object for additional compatibility data", example = "{\"key\":\"value\"}")
-        Map<String, Object> extraCompatibility
+        Map<String, Object> extraCompatibility,
+
+        @Schema(description = "Metadata for performance and template matching", example = "{\"performance_score\": 8500}")
+                Map<String, Object> metadata
 ) {}

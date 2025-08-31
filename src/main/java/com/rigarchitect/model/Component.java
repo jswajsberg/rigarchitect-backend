@@ -16,7 +16,8 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Entity class representing a PC component.
+ * Entity class representing a PC component with metadata field
+ * for enhanced template matching and compatibility checking.
  * Maps to the 'components' table in the database.
  */
 @Entity
@@ -24,7 +25,7 @@ import java.util.Map;
 @Getter
 @Setter
 @NoArgsConstructor
-@Check(constraints = "price >= 0 AND stock_quantity >= 0") // DB-level checks
+@Check(constraints = "price >= 0 AND stock_quantity >= 0")
 public class Component extends BaseEntity {
 
     @Id
@@ -44,20 +45,19 @@ public class Component extends BaseEntity {
     @Column(name = "compatibility_tag", nullable = false, length = 50)
     private String compatibilityTag;
 
-    // Using precision + scale for money values
     @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal price = BigDecimal.ZERO;
 
     @Column(name = "stock_quantity", nullable = false)
-    @ColumnDefault("0") // DB-level default for safety
+    @ColumnDefault("0")
     private Integer stockQuantity = 0;
 
-    // Ignore this field during JSON serialization to prevent circular reference
+    // Ignore this field during JSON serialization to prevent circular references
     @OneToMany(mappedBy = "component", fetch = FetchType.LAZY)
     @JsonIgnore
     private List<CartItem> cartItems;
 
-    // Optional compatibility fields
+    // Existing compatibility fields
     @Column(length = 20)
     private String socket;
 
@@ -81,8 +81,12 @@ public class Component extends BaseEntity {
     @Column(name = "pci_slots_required")
     private Integer pciSlotsRequired;
 
-    // JSONB for flexible extra compatibility info (PostgreSQL-specific)
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "extra_compatibility", columnDefinition = "jsonb")
     private Map<String, Object> extraCompatibility;
+
+    // Single metadata field for enhanced functionality
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "metadata", columnDefinition = "jsonb")
+    private Map<String, Object> metadata;
 }

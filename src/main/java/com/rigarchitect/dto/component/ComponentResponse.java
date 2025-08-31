@@ -57,6 +57,9 @@ public record ComponentResponse(
         @Schema(description = "Flexible JSON object for additional compatibility data", example = "{\"key\":\"value\"}")
         Map<String, Object> extraCompatibility,
 
+        @Schema(description = "Metadata for performance and template matching", example = "{\"performance_score\": 8500}")
+        Map<String, Object> metadata,
+
         @Schema(description = "Timestamp when the component was created", example = "2025-08-13T14:00:00")
         LocalDateTime createdAt,
 

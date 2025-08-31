@@ -64,6 +64,7 @@ public class ComponentService {
                     existing.setPsuFormFactor(request.psuFormFactor());
                     existing.setPciSlotsRequired(request.pciSlotsRequired());
                     existing.setExtraCompatibility(request.extraCompatibility());
+                    existing.setMetadata(request.metadata());
                     Component updated = componentRepository.save(existing);
                     return toResponse(updated);
                 });
@@ -151,6 +152,7 @@ public class ComponentService {
                 component.getPsuFormFactor(),
                 component.getPciSlotsRequired(),
                 component.getExtraCompatibility(),
+                component.getMetadata(),
                 component.getCreatedAt(),
                 component.getUpdatedAt()
         );
@@ -173,6 +175,7 @@ public class ComponentService {
         component.setPsuFormFactor(request.psuFormFactor());
         component.setPciSlotsRequired(request.pciSlotsRequired());
         component.setExtraCompatibility(request.extraCompatibility());
+        component.setMetadata(request.metadata());
         return component;
     }
     
