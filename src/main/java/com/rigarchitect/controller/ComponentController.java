@@ -1,6 +1,7 @@
 package com.rigarchitect.controller;
 
 import com.rigarchitect.dto.MessageResponse;
+import com.rigarchitect.dto.common.PagedResponse;
 import com.rigarchitect.dto.component.ComponentRequest;
 import com.rigarchitect.dto.component.ComponentResponse;
 import com.rigarchitect.exception.ResourceNotFoundException;
@@ -29,7 +30,8 @@ public class ComponentController {
         this.componentService = componentService;
     }
 
-    @Operation(summary = "Get all components", description = "Retrieve all components in the catalog")
+    // Existing non-paginated endpoints (kept for backward compatibility)
+    @Operation(summary = "Get all components", description = "Retrieve all components in the catalog (non-paginated)")
     @ApiResponse(responseCode = "200", description = "List of all components")
     @GetMapping
     public ResponseEntity<List<ComponentResponse>> getAllComponents() {
@@ -37,7 +39,7 @@ public class ComponentController {
         return ResponseEntity.ok(components);
     }
 
-    @Operation(summary = "Get components by type", description = "Retrieve all components of a specific type")
+    @Operation(summary = "Get components by type", description = "Retrieve all components of a specific type (non-paginated)")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Components retrieved successfully")
     })
@@ -50,6 +52,79 @@ public class ComponentController {
         return ResponseEntity.ok(components);
     }
 
+    // New paginated endpoints
+    @Operation(summary = "Get all components (paginated)", description = "Retrieve all components with pagination support")
+    @ApiResponse(responseCode = "200", description = "Paginated list of components")
+    @GetMapping("/paged")
+    public ResponseEntity<PagedResponse<ComponentResponse>> getAllComponentsPaged(
+            @Parameter(description = "Page number (0-based)") @RequestParam(defaultValue = "0") int page,
+            @Parameter(description = "Page size") @RequestParam(defaultValue = "10") int size,
+            @Parameter(description = "Sort field") @RequestParam(defaultValue = "name") String sortBy,
+            @Parameter(description = "Sort direction (asc/desc)") @RequestParam(defaultValue = "asc") String sortDirection) {
+
+        PagedResponse<ComponentResponse> response = componentService.getAllComponentsPaged(page, size, sortBy, sortDirection);
+        return ResponseEntity.ok(response);
+    }
+
+    @Operation(summary = "Get components by type (paginated)", description = "Retrieve components of a specific type with pagination")
+    @GetMapping("/type/{type}/paged")
+    public ResponseEntity<PagedResponse<ComponentResponse>> getComponentsByTypePaged(
+            @Parameter(description = "Type of component to filter by", required = true) @PathVariable ComponentType type,
+            @Parameter(description = "Page number (0-based)") @RequestParam(defaultValue = "0") int page,
+            @Parameter(description = "Page size") @RequestParam(defaultValue = "20") int size,
+            @Parameter(description = "Sort field") @RequestParam(defaultValue = "name") String sortBy,
+            @Parameter(description = "Sort direction (asc/desc)") @RequestParam(defaultValue = "asc") String sortDirection) {
+
+        PagedResponse<ComponentResponse> response = componentService.getComponentsByTypePaged(type, page, size, sortBy, sortDirection);
+        return ResponseEntity.ok(response);
+    }
+
+    @Operation(summary = "Get components by brand (paginated)", description = "Retrieve components by brand with pagination")
+    @GetMapping("/brand/{brand}/paged")
+    public ResponseEntity<PagedResponse<ComponentResponse>> getComponentsByBrandPaged(
+            @Parameter(description = "Brand to filter by", required = true) @PathVariable String brand,
+            @Parameter(description = "Page number (0-based)") @RequestParam(defaultValue = "0") int page,
+            @Parameter(description = "Page size") @RequestParam(defaultValue = "20") int size,
+            @Parameter(description = "Sort field") @RequestParam(defaultValue = "name") String sortBy,
+            @Parameter(description = "Sort direction (asc/desc)") @RequestParam(defaultValue = "asc") String sortDirection) {
+
+        PagedResponse<ComponentResponse> response = componentService.getComponentsByBrandPaged(brand, page, size, sortBy, sortDirection);
+        return ResponseEntity.ok(response);
+    }
+
+    @Operation(summary = "Search components (paginated)", description = "Search components with multiple filters and pagination")
+    @GetMapping("/search/paged")
+    public ResponseEntity<PagedResponse<ComponentResponse>> searchComponentsPaged(
+            @Parameter(description = "Type filter") @RequestParam(required = false) ComponentType type,
+            @Parameter(description = "Brand filter") @RequestParam(required = false) String brand,
+            @Parameter(description = "Socket filter") @RequestParam(required = false) String socket,
+            @Parameter(description = "Maximum price filter") @RequestParam(required = false) BigDecimal maxPrice,
+            @Parameter(description = "Minimum stock filter") @RequestParam(required = false) Integer minStock,
+            @Parameter(description = "Page number (0-based)") @RequestParam(defaultValue = "0") int page,
+            @Parameter(description = "Page size") @RequestParam(defaultValue = "20") int size,
+            @Parameter(description = "Sort field") @RequestParam(defaultValue = "name") String sortBy,
+            @Parameter(description = "Sort direction (asc/desc)") @RequestParam(defaultValue = "asc") String sortDirection) {
+
+        PagedResponse<ComponentResponse> response = componentService.searchComponentsPaged(
+                type, brand, socket, maxPrice, minStock, page, size, sortBy, sortDirection
+        );
+        return ResponseEntity.ok(response);
+    }
+
+    @Operation(summary = "Get components in stock (paginated)", description = "Retrieve components in stock with pagination")
+    @GetMapping("/in-stock/paged")
+    public ResponseEntity<PagedResponse<ComponentResponse>> getComponentsInStockPaged(
+            @Parameter(description = "Minimum quantity in stock") @RequestParam(required = false) Integer minQuantity,
+            @Parameter(description = "Page number (0-based)") @RequestParam(defaultValue = "0") int page,
+            @Parameter(description = "Page size") @RequestParam(defaultValue = "20") int size,
+            @Parameter(description = "Sort field") @RequestParam(defaultValue = "name") String sortBy,
+            @Parameter(description = "Sort direction (asc/desc)") @RequestParam(defaultValue = "asc") String sortDirection) {
+
+        PagedResponse<ComponentResponse> response = componentService.getComponentsInStockPaged(minQuantity, page, size, sortBy, sortDirection);
+        return ResponseEntity.ok(response);
+    }
+
+    // Existing endpoints remain unchanged
     @Operation(summary = "Get a component by ID", description = "Retrieve a single component using its ID")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Component retrieved successfully"),
@@ -57,27 +132,25 @@ public class ComponentController {
     })
     @GetMapping("/{id}")
     public ResponseEntity<ComponentResponse> getComponentById(
-            @Parameter(description = "ID of the component", required = true)
+            @Parameter(description = "ID of the component to retrieve", required = true)
             @PathVariable Long id) {
 
         return componentService.getComponentById(id)
                 .map(ResponseEntity::ok)
-                .orElseThrow(() -> new ResourceNotFoundException("Component with ID " + id + " not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Component not found with id: " + id));
     }
 
     @Operation(summary = "Create a new component", description = "Add a new component to the catalog")
-    @ApiResponses({
-            @ApiResponse(responseCode = "201", description = "Component created successfully")
-    })
+    @ApiResponse(responseCode = "201", description = "Component created successfully")
     @PostMapping
     public ResponseEntity<ComponentResponse> createComponent(
             @Valid @RequestBody ComponentRequest request) {
 
-        ComponentResponse saved = componentService.createComponent(request);
-        return ResponseEntity.status(HttpStatus.CREATED).body(saved);
+        ComponentResponse response = componentService.createComponent(request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
-    @Operation(summary = "Update a component", description = "Update an existing component by ID")
+    @Operation(summary = "Update an existing component", description = "Update a component in the catalog")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Component updated successfully"),
             @ApiResponse(responseCode = "404", description = "Component not found")
@@ -90,10 +163,10 @@ public class ComponentController {
 
         return componentService.updateComponent(id, request)
                 .map(ResponseEntity::ok)
-                .orElseThrow(() -> new ResourceNotFoundException("Component with ID " + id + " not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Component not found with id: " + id));
     }
 
-    @Operation(summary = "Delete a component", description = "Delete a component by ID")
+    @Operation(summary = "Delete a component", description = "Remove a component from the catalog")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Component deleted successfully"),
             @ApiResponse(responseCode = "404", description = "Component not found")
@@ -103,24 +176,25 @@ public class ComponentController {
             @Parameter(description = "ID of the component to delete", required = true)
             @PathVariable Long id) {
 
-        if (componentService.getComponentById(id).isEmpty()) {
-            throw new ResourceNotFoundException("Component with ID " + id + " not found");
-        }
+        // Verify component exists before deletion
+        componentService.getComponentById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Component not found with id: " + id));
+
         componentService.deleteComponent(id);
-        return ResponseEntity.ok(new MessageResponse("Component with ID " + id + " deleted successfully"));
+        return ResponseEntity.ok(new MessageResponse("Component deleted successfully"));
     }
 
-    @Operation(summary = "Get components by brand", description = "Retrieve components filtered by brand")
+    @Operation(summary = "Get components by brand", description = "Retrieve all components from a specific brand")
     @GetMapping("/brand/{brand}")
     public ResponseEntity<List<ComponentResponse>> getComponentsByBrand(
-            @Parameter(description = "Brand name to filter by", required = true)
+            @Parameter(description = "Brand to filter by", required = true)
             @PathVariable String brand) {
 
         List<ComponentResponse> components = componentService.getComponentsByBrand(brand);
         return ResponseEntity.ok(components);
     }
 
-    @Operation(summary = "Get components by socket", description = "Retrieve components filtered by socket")
+    @Operation(summary = "Get components by socket", description = "Retrieve components filtered by socket type")
     @GetMapping("/socket/{socket}")
     public ResponseEntity<List<ComponentResponse>> getComponentsBySocket(
             @Parameter(description = "Socket type to filter by", required = true)

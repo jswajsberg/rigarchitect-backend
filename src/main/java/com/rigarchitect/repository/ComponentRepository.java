@@ -2,9 +2,12 @@ package com.rigarchitect.repository;
 
 import com.rigarchitect.model.Component;
 import com.rigarchitect.model.enums.ComponentType;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.lang.NonNull;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -12,30 +15,64 @@ import java.util.List;
 @SuppressWarnings("unused")
 public interface ComponentRepository extends JpaRepository<Component, Long> {
 
+    // Existing non-paginated methods (keep for backward compatibility where needed)
     List<Component> findByType(ComponentType type);
-
-    // Find by brand (uses idx_components_brand)
     List<Component> findByBrand(String brand);
-
-    // Find by socket (uses idx_components_socket)
     List<Component> findBySocket(String socket);
 
-    // Find by compatibility tag, including partial matches (uses idx_components_compatibility_tag)
+    // New paginated methods
+    @NonNull
+    Page<Component> findAll(@NonNull Pageable pageable);
+
+    Page<Component> findByType(ComponentType type, Pageable pageable);
+
+    Page<Component> findByBrand(String brand, Pageable pageable);
+
+    Page<Component> findBySocket(String socket, Pageable pageable);
+
+    // Paginated compatibility tag search
+    @Query("SELECT c FROM Component c WHERE LOWER(c.compatibilityTag) LIKE LOWER(CONCAT('%', :tag, '%'))")
+    Page<Component> findByCompatibilityTag(@Param("tag") String tag, Pageable pageable);
+
+    // Paginated combined queries
+    Page<Component> findByTypeAndBrand(ComponentType type, String brand, Pageable pageable);
+
+    Page<Component> findByTypeAndSocket(ComponentType type, String socket, Pageable pageable);
+
+    Page<Component> findByTypeAndPriceLessThanEqual(ComponentType type, BigDecimal maxPrice, Pageable pageable);
+
+    // Paginated stock queries
+    Page<Component> findByStockQuantityGreaterThan(Integer quantity, Pageable pageable);
+
+    Page<Component> findByTypeAndStockQuantityGreaterThan(ComponentType type, Integer quantity, Pageable pageable);
+
+    // Complex paginated search query
+    @Query("SELECT c FROM Component c WHERE " +
+            "(:type IS NULL OR c.type = :type) AND " +
+            "(:brand IS NULL OR LOWER(c.brand) LIKE LOWER(CONCAT('%', :brand, '%'))) AND " +
+            "(:socket IS NULL OR LOWER(c.socket) LIKE LOWER(CONCAT('%', :socket, '%'))) AND " +
+            "(:maxPrice IS NULL OR c.price <= :maxPrice) AND " +
+            "c.stockQuantity >= :minStock")
+    Page<Component> findComponentsWithFilters(
+            @Param("type") ComponentType type,
+            @Param("brand") String brand,
+            @Param("socket") String socket,
+            @Param("maxPrice") BigDecimal maxPrice,
+            @Param("minStock") Integer minStock,
+            Pageable pageable
+    );
+
+    // Keep existing non-paginated methods for specific use cases
     @Query("SELECT c FROM Component c WHERE LOWER(c.compatibilityTag) LIKE LOWER(CONCAT('%', :tag, '%'))")
     List<Component> findByCompatibilityTag(@Param("tag") String tag);
 
-    // Combined queries that would benefit from multiple indexes
     List<Component> findByTypeAndBrand(ComponentType type, String brand);
     List<Component> findByTypeAndSocket(ComponentType type, String socket);
     List<Component> findByTypeAndPriceLessThanEqual(ComponentType type, BigDecimal maxPrice);
 
-    // Find components in stock
     List<Component> findByStockQuantityGreaterThan(Integer quantity);
-
-    // Find components by type with stock available
     List<Component> findByTypeAndStockQuantityGreaterThan(ComponentType type, Integer quantity);
 
-    // Custom query for compatibility checking (example)
     @Query("SELECT c FROM Component c WHERE c.type = :type AND c.socket = :socket AND c.stockQuantity > 0")
     List<Component> findCompatibleComponentsInStock(@Param("type") ComponentType type, @Param("socket") String socket);
 }

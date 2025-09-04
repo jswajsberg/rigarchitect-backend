@@ -1,10 +1,15 @@
 package com.rigarchitect.service;
 
+import com.rigarchitect.dto.common.PagedResponse;
 import com.rigarchitect.dto.component.ComponentRequest;
 import com.rigarchitect.dto.component.ComponentResponse;
 import com.rigarchitect.model.Component;
 import com.rigarchitect.model.enums.ComponentType;
 import com.rigarchitect.repository.ComponentRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -21,6 +26,7 @@ public class ComponentService {
         this.componentRepository = componentRepository;
     }
 
+    // Existing non-paginated methods (keep for backward compatibility)
     public List<ComponentResponse> getAllComponents() {
         return componentRepository.findAll()
                 .stream()
@@ -35,6 +41,86 @@ public class ComponentService {
                 .collect(Collectors.toList());
     }
 
+    // New paginated methods
+    public PagedResponse<ComponentResponse> getAllComponentsPaged(int page, int size, String sortBy, String sortDirection) {
+        Sort.Direction direction = Sort.Direction.fromString(sortDirection);
+        Pageable pageable = PageRequest.of(page, size, Sort.by(direction, sortBy));
+
+        Page<Component> componentPage = componentRepository.findAll(pageable);
+        Page<ComponentResponse> responsePage = componentPage.map(this::toResponse);
+
+        return PagedResponse.fromPage(responsePage);
+    }
+
+    public PagedResponse<ComponentResponse> getComponentsByTypePaged(ComponentType type, int page, int size, String sortBy, String sortDirection) {
+        Sort.Direction direction = Sort.Direction.fromString(sortDirection);
+        Pageable pageable = PageRequest.of(page, size, Sort.by(direction, sortBy));
+
+        Page<Component> componentPage = componentRepository.findByType(type, pageable);
+        Page<ComponentResponse> responsePage = componentPage.map(this::toResponse);
+
+        return PagedResponse.fromPage(responsePage);
+    }
+
+    public PagedResponse<ComponentResponse> getComponentsByBrandPaged(String brand, int page, int size, String sortBy, String sortDirection) {
+        Sort.Direction direction = Sort.Direction.fromString(sortDirection);
+        Pageable pageable = PageRequest.of(page, size, Sort.by(direction, sortBy));
+
+        Page<Component> componentPage = componentRepository.findByBrand(brand, pageable);
+        Page<ComponentResponse> responsePage = componentPage.map(this::toResponse);
+
+        return PagedResponse.fromPage(responsePage);
+    }
+
+    public PagedResponse<ComponentResponse> searchComponentsPaged(
+            ComponentType type, String brand, String socket,
+            BigDecimal maxPrice, Integer minStock,
+            int page, int size, String sortBy, String sortDirection) {
+
+        Sort.Direction direction;
+        try {
+            direction = Sort.Direction.fromString(sortDirection);
+        } catch (IllegalArgumentException e) {
+            direction = Sort.Direction.ASC;
+        }
+
+        Pageable pageable = PageRequest.of(
+                Math.max(0, page),
+                Math.min(Math.max(1, size), 100),
+                Sort.by(direction, sortBy)
+        );
+
+        Page<Component> componentPage = componentRepository.findComponentsWithFilters(
+                type, brand, socket, maxPrice, minStock != null ? minStock : 0, pageable
+        );
+
+        Page<ComponentResponse> responsePage = componentPage.map(this::toResponse);
+        return PagedResponse.fromPage(responsePage);
+    }
+
+    public PagedResponse<ComponentResponse> getComponentsInStockPaged(Integer minQuantity, int page, int size, String sortBy, String sortDirection) {
+        Sort.Direction direction;
+        try {
+            direction = Sort.Direction.fromString(sortDirection);
+        } catch (IllegalArgumentException e) {
+            direction = Sort.Direction.ASC;
+        }
+
+        Pageable pageable = PageRequest.of(
+                Math.max(0, page),
+                Math.min(Math.max(1, size), 100),
+                Sort.by(direction, sortBy)
+        );
+
+        Page<Component> componentPage = componentRepository.findByStockQuantityGreaterThan(
+                minQuantity != null ? minQuantity : 0, pageable
+        );
+
+        Page<ComponentResponse> responsePage = componentPage.map(this::toResponse);
+        return PagedResponse.fromPage(responsePage);
+    }
+
+    // Existing methods remain unchanged
     public Optional<ComponentResponse> getComponentById(Long id) {
         return componentRepository.findById(id)
                 .map(this::toResponse);
@@ -78,6 +164,7 @@ public class ComponentService {
         return componentRepository.findById(id);
     }
 
+    // Keep existing non-paginated filter methods for specific use cases
     public List<ComponentResponse> getComponentsByBrand(String brand) {
         return componentRepository.findByBrand(brand)
                 .stream()
@@ -99,41 +186,29 @@ public class ComponentService {
                 .collect(Collectors.toList());
     }
 
-    public List<ComponentResponse> searchComponents(ComponentType type, String brand,
-                                                    String socket, BigDecimal maxPrice, Integer minStock) {
-        List<Component> components;
-        if (type != null && brand != null) {
-            components = componentRepository.findByTypeAndBrand(type, brand);
-        } else if (type != null && socket != null) {
-            components = componentRepository.findByTypeAndSocket(type, socket);
-        } else if (type != null && maxPrice != null) {
-            components = componentRepository.findByTypeAndPriceLessThanEqual(type, maxPrice);
-        } else if (type != null) {
-            components = componentRepository.findByType(type);
-        } else if (brand != null) {
-            components = componentRepository.findByBrand(brand);
-        } else if (socket != null) {
-            components = componentRepository.findBySocket(socket);
-        } else {
-            components = componentRepository.findAll();
-        }
+    public List<ComponentResponse> searchComponents(ComponentType type, String brand, String socket, BigDecimal maxPrice, Integer minStock) {
+        // For backward compatibility, use the repository's native filtering
+        // Consider replacing this with a custom query if performance becomes an issue
+        List<Component> components = componentRepository.findAll();
 
         return components.stream()
-                .filter(c -> minStock == null || c.getStockQuantity() >= minStock)
+                .filter(c -> type == null || c.getType().equals(type))
+                .filter(c -> brand == null || (c.getBrand() != null && c.getBrand().toLowerCase().contains(brand.toLowerCase())))
+                .filter(c -> socket == null || (c.getSocket() != null && c.getSocket().toLowerCase().contains(socket.toLowerCase())))
+                .filter(c -> maxPrice == null || c.getPrice().compareTo(maxPrice) <= 0)
+                .filter(c -> c.getStockQuantity() >= (minStock != null ? minStock : 0))
                 .map(this::toResponse)
                 .collect(Collectors.toList());
     }
 
     public List<ComponentResponse> getComponentsInStock(Integer minQuantity) {
-        return componentRepository.findByStockQuantityGreaterThan(minQuantity)
+        return componentRepository.findByStockQuantityGreaterThan(minQuantity != null ? minQuantity : 0)
                 .stream()
                 .map(this::toResponse)
                 .collect(Collectors.toList());
     }
 
-
-    // Mapping methods
-
+    // Helper methods remain the same
     private ComponentResponse toResponse(Component component) {
         return new ComponentResponse(
                 component.getId(),
@@ -178,6 +253,4 @@ public class ComponentService {
         component.setMetadata(request.metadata());
         return component;
     }
-    
-    
 }
