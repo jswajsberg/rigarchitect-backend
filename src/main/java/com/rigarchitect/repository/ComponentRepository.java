@@ -62,6 +62,30 @@ public interface ComponentRepository extends JpaRepository<Component, Long> {
             Pageable pageable
     );
 
+    // Comprehensive search query with all filters including search term  
+    @Query(value = "SELECT * FROM components c WHERE " +
+            "(:searchTerm IS NULL OR " +
+            "c.name ILIKE CONCAT('%', :searchTerm, '%') OR " +
+            "c.brand ILIKE CONCAT('%', :searchTerm, '%') OR " +
+            "c.compatibility_tag ILIKE CONCAT('%', :searchTerm, '%')) AND " +
+            "(:type IS NULL OR c.type = :type) AND " +
+            "(:brand IS NULL OR c.brand ILIKE CONCAT('%', :brand, '%')) AND " +
+            "(:socket IS NULL OR c.socket ILIKE CONCAT('%', :socket, '%')) AND " +
+            "(:compatibilityTag IS NULL OR c.compatibility_tag ILIKE CONCAT('%', :compatibilityTag, '%')) AND " +
+            "(:maxPrice IS NULL OR c.price <= :maxPrice) AND " +
+            "c.stock_quantity >= :minStock",
+            nativeQuery = true)
+    Page<Component> findComponentsWithAllFilters(
+            @Param("searchTerm") String searchTerm,
+            @Param("type") String type,
+            @Param("brand") String brand,
+            @Param("socket") String socket,
+            @Param("compatibilityTag") String compatibilityTag,
+            @Param("maxPrice") BigDecimal maxPrice,
+            @Param("minStock") Integer minStock,
+            Pageable pageable
+    );
+
     // Keep existing non-paginated methods for specific use cases
     @Query("SELECT c FROM Component c WHERE LOWER(c.compatibilityTag) LIKE LOWER(CONCAT('%', :tag, '%'))")
     List<Component> findByCompatibilityTag(@Param("tag") String tag);
