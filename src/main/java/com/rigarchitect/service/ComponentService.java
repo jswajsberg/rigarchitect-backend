@@ -42,23 +42,58 @@ public class ComponentService {
     }
 
     // New paginated methods
-    public PagedResponse<ComponentResponse> getAllComponentsPaged(int page, int size, String sortBy, String sortDirection) {
-        Sort.Direction direction = Sort.Direction.fromString(sortDirection);
-        Pageable pageable = PageRequest.of(page, size, Sort.by(direction, sortBy));
+    public PagedResponse<ComponentResponse> getAllComponentsPaged(
+            String searchTerm, String brand, String compatibilityTag, BigDecimal maxPrice, 
+            Integer minStock, Boolean inStockOnly, int page, int size, String sortBy, String sortDirection) {
+        
+        Sort.Direction direction;
+        try {
+            direction = Sort.Direction.fromString(sortDirection);
+        } catch (IllegalArgumentException e) {
+            direction = Sort.Direction.ASC;
+        }
 
-        Page<Component> componentPage = componentRepository.findAll(pageable);
+        Pageable pageable = PageRequest.of(
+                Math.max(0, page),
+                Math.min(Math.max(1, size), 100),
+                Sort.by(direction, sortBy)
+        );
+
+        // Use the comprehensive search method with all filters
+        Page<Component> componentPage = componentRepository.findComponentsWithAllFilters(
+                searchTerm, null, brand, null, compatibilityTag, maxPrice, 
+                inStockOnly != null && inStockOnly ? 1 : (minStock != null ? minStock : 0), pageable
+        );
+
         Page<ComponentResponse> responsePage = componentPage.map(this::toResponse);
-
         return PagedResponse.fromPage(responsePage);
     }
 
-    public PagedResponse<ComponentResponse> getComponentsByTypePaged(ComponentType type, int page, int size, String sortBy, String sortDirection) {
-        Sort.Direction direction = Sort.Direction.fromString(sortDirection);
-        Pageable pageable = PageRequest.of(page, size, Sort.by(direction, sortBy));
+    public PagedResponse<ComponentResponse> getComponentsByTypePaged(
+            ComponentType type, String searchTerm, String brand, String compatibilityTag, 
+            BigDecimal maxPrice, Integer minStock, Boolean inStockOnly, 
+            int page, int size, String sortBy, String sortDirection) {
+        
+        Sort.Direction direction;
+        try {
+            direction = Sort.Direction.fromString(sortDirection);
+        } catch (IllegalArgumentException e) {
+            direction = Sort.Direction.ASC;
+        }
 
-        Page<Component> componentPage = componentRepository.findByType(type, pageable);
+        Pageable pageable = PageRequest.of(
+                Math.max(0, page),
+                Math.min(Math.max(1, size), 100),
+                Sort.by(direction, sortBy)
+        );
+
+        // Use the comprehensive search method with type filter
+        Page<Component> componentPage = componentRepository.findComponentsWithAllFilters(
+                searchTerm, type != null ? type.name() : null, brand, null, compatibilityTag, maxPrice, 
+                inStockOnly != null && inStockOnly ? 1 : (minStock != null ? minStock : 0), pageable
+        );
+
         Page<ComponentResponse> responsePage = componentPage.map(this::toResponse);
-
         return PagedResponse.fromPage(responsePage);
     }
 
@@ -73,8 +108,8 @@ public class ComponentService {
     }
 
     public PagedResponse<ComponentResponse> searchComponentsPaged(
-            ComponentType type, String brand, String socket,
-            BigDecimal maxPrice, Integer minStock,
+            String searchTerm, ComponentType type, String brand, String socket, String compatibilityTag,
+            BigDecimal maxPrice, Integer minStock, Boolean inStockOnly,
             int page, int size, String sortBy, String sortDirection) {
 
         Sort.Direction direction;
@@ -90,8 +125,9 @@ public class ComponentService {
                 Sort.by(direction, sortBy)
         );
 
-        Page<Component> componentPage = componentRepository.findComponentsWithFilters(
-                type, brand, socket, maxPrice, minStock != null ? minStock : 0, pageable
+        Page<Component> componentPage = componentRepository.findComponentsWithAllFilters(
+                searchTerm, type != null ? type.name() : null, brand, socket, compatibilityTag, maxPrice, 
+                inStockOnly != null && inStockOnly ? 1 : (minStock != null ? minStock : 0), pageable
         );
 
         Page<ComponentResponse> responsePage = componentPage.map(this::toResponse);

@@ -57,12 +57,19 @@ public class ComponentController {
     @ApiResponse(responseCode = "200", description = "Paginated list of components")
     @GetMapping("/paged")
     public ResponseEntity<PagedResponse<ComponentResponse>> getAllComponentsPaged(
+            @Parameter(description = "Search term (name, brand, etc.)") @RequestParam(required = false) String searchTerm,
+            @Parameter(description = "Brand filter") @RequestParam(required = false) String brand,
+            @Parameter(description = "Compatibility tag filter") @RequestParam(required = false) String compatibilityTag,
+            @Parameter(description = "Maximum price filter") @RequestParam(required = false) BigDecimal maxPrice,
+            @Parameter(description = "Minimum stock filter") @RequestParam(required = false) Integer minStock,
+            @Parameter(description = "In stock only filter") @RequestParam(required = false, defaultValue = "false") Boolean inStockOnly,
             @Parameter(description = "Page number (0-based)") @RequestParam(defaultValue = "0") int page,
             @Parameter(description = "Page size") @RequestParam(defaultValue = "10") int size,
             @Parameter(description = "Sort field") @RequestParam(defaultValue = "name") String sortBy,
             @Parameter(description = "Sort direction (asc/desc)") @RequestParam(defaultValue = "asc") String sortDirection) {
 
-        PagedResponse<ComponentResponse> response = componentService.getAllComponentsPaged(page, size, sortBy, sortDirection);
+        PagedResponse<ComponentResponse> response = componentService.getAllComponentsPaged(
+                searchTerm, brand, compatibilityTag, maxPrice, minStock, inStockOnly, page, size, sortBy, sortDirection);
         return ResponseEntity.ok(response);
     }
 
@@ -70,12 +77,19 @@ public class ComponentController {
     @GetMapping("/type/{type}/paged")
     public ResponseEntity<PagedResponse<ComponentResponse>> getComponentsByTypePaged(
             @Parameter(description = "Type of component to filter by", required = true) @PathVariable ComponentType type,
+            @Parameter(description = "Search term (name, brand, etc.)") @RequestParam(required = false) String searchTerm,
+            @Parameter(description = "Brand filter") @RequestParam(required = false) String brand,
+            @Parameter(description = "Compatibility tag filter") @RequestParam(required = false) String compatibilityTag,
+            @Parameter(description = "Maximum price filter") @RequestParam(required = false) BigDecimal maxPrice,
+            @Parameter(description = "Minimum stock filter") @RequestParam(required = false) Integer minStock,
+            @Parameter(description = "In stock only filter") @RequestParam(required = false, defaultValue = "false") Boolean inStockOnly,
             @Parameter(description = "Page number (0-based)") @RequestParam(defaultValue = "0") int page,
             @Parameter(description = "Page size") @RequestParam(defaultValue = "20") int size,
             @Parameter(description = "Sort field") @RequestParam(defaultValue = "name") String sortBy,
             @Parameter(description = "Sort direction (asc/desc)") @RequestParam(defaultValue = "asc") String sortDirection) {
 
-        PagedResponse<ComponentResponse> response = componentService.getComponentsByTypePaged(type, page, size, sortBy, sortDirection);
+        PagedResponse<ComponentResponse> response = componentService.getComponentsByTypePaged(
+                type, searchTerm, brand, compatibilityTag, maxPrice, minStock, inStockOnly, page, size, sortBy, sortDirection);
         return ResponseEntity.ok(response);
     }
 
@@ -95,18 +109,21 @@ public class ComponentController {
     @Operation(summary = "Search components (paginated)", description = "Search components with multiple filters and pagination")
     @GetMapping("/search/paged")
     public ResponseEntity<PagedResponse<ComponentResponse>> searchComponentsPaged(
+            @Parameter(description = "Search term (name, brand, etc.)") @RequestParam(required = false) String searchTerm,
             @Parameter(description = "Type filter") @RequestParam(required = false) ComponentType type,
             @Parameter(description = "Brand filter") @RequestParam(required = false) String brand,
             @Parameter(description = "Socket filter") @RequestParam(required = false) String socket,
+            @Parameter(description = "Compatibility tag filter") @RequestParam(required = false) String compatibilityTag,
             @Parameter(description = "Maximum price filter") @RequestParam(required = false) BigDecimal maxPrice,
             @Parameter(description = "Minimum stock filter") @RequestParam(required = false) Integer minStock,
+            @Parameter(description = "In stock only filter") @RequestParam(required = false, defaultValue = "false") Boolean inStockOnly,
             @Parameter(description = "Page number (0-based)") @RequestParam(defaultValue = "0") int page,
             @Parameter(description = "Page size") @RequestParam(defaultValue = "20") int size,
             @Parameter(description = "Sort field") @RequestParam(defaultValue = "name") String sortBy,
             @Parameter(description = "Sort direction (asc/desc)") @RequestParam(defaultValue = "asc") String sortDirection) {
 
         PagedResponse<ComponentResponse> response = componentService.searchComponentsPaged(
-                type, brand, socket, maxPrice, minStock, page, size, sortBy, sortDirection
+                searchTerm, type, brand, socket, compatibilityTag, maxPrice, minStock, inStockOnly, page, size, sortBy, sortDirection
         );
         return ResponseEntity.ok(response);
     }
