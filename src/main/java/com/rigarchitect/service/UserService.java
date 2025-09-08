@@ -4,6 +4,7 @@ import com.rigarchitect.dto.user.UserRequest;
 import com.rigarchitect.dto.user.UserResponse;
 import com.rigarchitect.model.User;
 import com.rigarchitect.repository.UserRepository;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -14,9 +15,11 @@ import java.util.stream.Collectors;
 @Service
 public class UserService {
     private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
 
-    public UserService(UserRepository userRepository) {
+    public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder) {
         this.userRepository = userRepository;
+        this.passwordEncoder = passwordEncoder;
     }
 
     // For controller/service internal use
@@ -80,8 +83,7 @@ public class UserService {
 
     // NEW: Find user by email (useful for user lookup)
     public Optional<UserResponse> getUserByEmail(String email) {
-        User user = userRepository.findByEmail(email);
-        return user != null ? Optional.of(toResponse(user)) : Optional.empty();
+        return userRepository.findByEmail(email).map(this::toResponse);
     }
 
     // --- DTO ↔ Entity mapping methods ---
@@ -102,9 +104,9 @@ public class UserService {
         user.setName(request.name());
         user.setEmail(request.email());
         user.setBudget(request.budget());
-        // For now, we'll set a placeholder password hash since the field is required
-        // This will be properly handled when we add authentication
-        user.setPasswordHash("placeholder_hash_" + System.currentTimeMillis());
+        // Set a default password hash for users created via UserRequest (admin/system users)
+        // These users will need to reset their password to log in
+        user.setPasswordHash(passwordEncoder.encode("temp_password_" + System.currentTimeMillis()));
         return user;
     }
 }

@@ -24,4 +24,9 @@ public record UserResponse(
 
         @Schema(description = "Timestamp when the user was last updated", example = "2025-08-13T14:05:00")
         LocalDateTime updatedAt
-) {}
+) {
+    // Constructor for authentication responses without timestamps
+    public UserResponse(Long id, String name, String email, BigDecimal budget) {
+        this(id, name, email, budget, null, null);
+    }
+}

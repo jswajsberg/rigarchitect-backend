@@ -8,7 +8,7 @@ import java.math.BigDecimal;
 
 @Schema(description = "Request DTO for updating a user's budget")
 public record BudgetUpdateRequest(
-        @Schema(description = "New budget amount in USD", required = true, example = "1500.00")
+        @Schema(description = "New budget amount in USD", example = "1500.00")
         @NotNull(message = "Budget is required")
         @DecimalMin(value = "0.0", message = "Budget must be zero or positive")
         BigDecimal budget
