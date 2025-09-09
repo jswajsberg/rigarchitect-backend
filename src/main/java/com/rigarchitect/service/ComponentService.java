@@ -17,16 +17,25 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+/**
+ * Service for managing PC components including CRUD operations,
+ * filtering, pagination, and search functionality.
+ */
 @Service
 public class ComponentService {
 
     private final ComponentRepository componentRepository;
 
+    /**
+     * Constructor with component repository dependency.
+     */
     public ComponentService(ComponentRepository componentRepository) {
         this.componentRepository = componentRepository;
     }
 
-    // Existing non-paginated methods (keep for backward compatibility)
+    /**
+     * Gets all components as response DTOs (non-paginated).
+     */
     public List<ComponentResponse> getAllComponents() {
         return componentRepository.findAll()
                 .stream()
@@ -34,6 +43,9 @@ public class ComponentService {
                 .collect(Collectors.toList());
     }
 
+    /**
+     * Gets components filtered by type (non-paginated).
+     */
     public List<ComponentResponse> getComponentsByType(ComponentType type) {
         return componentRepository.findByType(type)
                 .stream()
@@ -41,7 +53,9 @@ public class ComponentService {
                 .collect(Collectors.toList());
     }
 
-    // New paginated methods
+    /**
+     * Gets all components with comprehensive filtering and pagination.
+     */
     public PagedResponse<ComponentResponse> getAllComponentsPaged(
             String searchTerm, String brand, String compatibilityTag, BigDecimal maxPrice, 
             Integer minStock, Boolean inStockOnly, int page, int size, String sortBy, String sortDirection) {
@@ -59,7 +73,6 @@ public class ComponentService {
                 Sort.by(direction, sortBy)
         );
 
-        // Use the comprehensive search method with all filters
         Page<Component> componentPage = componentRepository.findComponentsWithAllFilters(
                 searchTerm, null, brand, null, compatibilityTag, maxPrice, 
                 inStockOnly != null && inStockOnly ? 1 : (minStock != null ? minStock : 0), pageable
@@ -69,6 +82,9 @@ public class ComponentService {
         return PagedResponse.fromPage(responsePage);
     }
 
+    /**
+     * Gets components filtered by type with additional filters and pagination.
+     */
     public PagedResponse<ComponentResponse> getComponentsByTypePaged(
             ComponentType type, String searchTerm, String brand, String compatibilityTag, 
             BigDecimal maxPrice, Integer minStock, Boolean inStockOnly, 
@@ -87,7 +103,6 @@ public class ComponentService {
                 Sort.by(direction, sortBy)
         );
 
-        // Use the comprehensive search method with type filter
         Page<Component> componentPage = componentRepository.findComponentsWithAllFilters(
                 searchTerm, type != null ? type.name() : null, brand, null, compatibilityTag, maxPrice, 
                 inStockOnly != null && inStockOnly ? 1 : (minStock != null ? minStock : 0), pageable
@@ -156,18 +171,26 @@ public class ComponentService {
         return PagedResponse.fromPage(responsePage);
     }
 
-    // Existing methods remain unchanged
+    /**
+     * Gets a component by ID as response DTO.
+     */
     public Optional<ComponentResponse> getComponentById(Long id) {
         return componentRepository.findById(id)
                 .map(this::toResponse);
     }
 
+    /**
+     * Creates a new component from request data.
+     */
     public ComponentResponse createComponent(ComponentRequest request) {
         Component component = toEntity(request);
         Component saved = componentRepository.save(component);
         return toResponse(saved);
     }
 
+    /**
+     * Updates an existing component with new data.
+     */
     public Optional<ComponentResponse> updateComponent(Long id, ComponentRequest request) {
         return componentRepository.findById(id)
                 .map(existing -> {
@@ -192,15 +215,20 @@ public class ComponentService {
                 });
     }
 
+    /**
+     * Deletes a component by ID.
+     */
     public void deleteComponent(Long id) {
         componentRepository.deleteById(id);
     }
 
+    /**
+     * Gets component entity by ID for internal service use.
+     */
     public Optional<Component> findEntityById(Long id) {
         return componentRepository.findById(id);
     }
 
-    // Keep existing non-paginated filter methods for specific use cases
     public List<ComponentResponse> getComponentsByBrand(String brand) {
         return componentRepository.findByBrand(brand)
                 .stream()
@@ -223,8 +251,6 @@ public class ComponentService {
     }
 
     public List<ComponentResponse> searchComponents(ComponentType type, String brand, String socket, BigDecimal maxPrice, Integer minStock) {
-        // For backward compatibility, use the repository's native filtering
-        // Consider replacing this with a custom query if performance becomes an issue
         List<Component> components = componentRepository.findAll();
 
         return components.stream()
@@ -244,7 +270,9 @@ public class ComponentService {
                 .collect(Collectors.toList());
     }
 
-    // Helper methods remain the same
+    /**
+     * Converts Component entity to ComponentResponse DTO.
+     */
     private ComponentResponse toResponse(Component component) {
         return new ComponentResponse(
                 component.getId(),
@@ -269,6 +297,9 @@ public class ComponentService {
         );
     }
 
+    /**
+     * Converts ComponentRequest DTO to Component entity.
+     */
     private Component toEntity(ComponentRequest request) {
         Component component = new Component();
         component.setName(request.name());

@@ -28,7 +28,6 @@ public class BuildCart extends BaseEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    // Many carts belong to one user
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
     @JsonBackReference("user-carts")
@@ -61,32 +60,9 @@ public class BuildCart extends BaseEntity {
     }
 
     /**
-     * Adds a CartItem to this build cart and updates totalPrice.
-     *
-     * @param item the CartItem to add
-     */
-    public void addCartItem(CartItem item) {
-        cartItems.add(item);
-        item.setBuildCart(this);
-        recalculateTotalPrice();
-    }
-
-    /**
-     * Removes a CartItem from this build cart and updates totalPrice.
-     *
-     * @param item the CartItem to remove
-     */
-    public void removeCartItem(CartItem item) {
-        cartItems.remove(item);
-        item.setBuildCart(null);
-        recalculateTotalPrice();
-    }
-
-    /**
      * Recalculates totalPrice based on the current cartItems.
      */
     public void recalculateTotalPrice() {
-        // Make sure cartItems are loaded
         if (cartItems == null) {
             totalPrice = BigDecimal.ZERO;
             return;

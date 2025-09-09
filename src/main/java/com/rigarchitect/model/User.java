@@ -36,7 +36,6 @@ public class User extends BaseEntity {
     @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal budget;
 
-    // One user can have many build carts
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonManagedReference("user-carts")
     private List<BuildCart> buildCarts;

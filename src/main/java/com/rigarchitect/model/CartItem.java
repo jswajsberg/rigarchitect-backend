@@ -19,26 +19,24 @@ import org.hibernate.annotations.Check;
 @Getter
 @Setter
 @NoArgsConstructor
-@Check(constraints = "quantity >= 1") // DB-level check to ensure quantity is always >= 1
+@Check(constraints = "quantity >= 1")
 public class CartItem extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    // Many CartItems belong to one BuildCart
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "cart_id", nullable = false)
     @JsonBackReference("cart-items")
     private BuildCart buildCart;
 
-    // Many CartItems reference one Component
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "component_id", nullable = false)
     private Component component;
 
     @Column(nullable = false)
-    @Min(1) // Hibernate validation: quantity must be >= 1
+    @Min(1)
     private Integer quantity;
 
     /**

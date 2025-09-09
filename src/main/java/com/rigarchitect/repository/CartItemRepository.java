@@ -10,6 +10,10 @@ import org.springframework.data.repository.query.Param;
 import java.util.List;
 import java.util.Optional;
 
+/**
+ * Repository interface for CartItem entities.
+ * Provides data access methods for cart item operations.
+ */
 public interface CartItemRepository extends JpaRepository<CartItem, Long> {
     List<CartItem> findByBuildCart(BuildCart buildCart);
 

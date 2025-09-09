@@ -25,6 +25,10 @@ import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
 
+/**
+ * REST controller for JWT-based authentication operations.
+ * Handles login, registration, token refresh, and password management.
+ */
 @Tag(name = "Authentication", description = "JWT-based authentication endpoints")
 @RestController
 @RequestMapping("/api/v1/auth")
@@ -43,6 +47,9 @@ public class AuthController {
     @Autowired
     JwtUtils jwtUtils;
 
+    /**
+     * Authenticates user and returns JWT tokens.
+     */
     @Operation(summary = "Authenticate user", description = "Login with email and password to receive JWT tokens")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Authentication successful"),
@@ -63,7 +70,6 @@ public class AuthController {
             
             UserPrincipal userPrincipal = (UserPrincipal) authentication.getPrincipal();
             
-            // Get expiration time for the access token
             long expiresAt = jwtUtils.getExpirationDateFromToken(accessToken).getTime();
             
             UserResponse userResponse = new UserResponse(
@@ -84,6 +90,9 @@ public class AuthController {
         }
     }
 
+    /**
+     * Registers a new user and returns JWT tokens for auto-login.
+     */
     @Operation(summary = "Register new user", description = "Create a new user account with email and password")
     @ApiResponses({
             @ApiResponse(responseCode = "201", description = "User registered successfully"),
@@ -92,25 +101,21 @@ public class AuthController {
     })
     @PostMapping("/signup")
     public ResponseEntity<?> registerUser(@Valid @RequestBody SignupRequest signUpRequest) {
-        // Check if email already exists
         if (userRepository.findByEmail(signUpRequest.email()).isPresent()) {
             return ResponseEntity.status(HttpStatus.CONFLICT)
                     .body(new MessageResponse("Error: Email is already in use!"));
         }
 
-        // Create new user account
         User user = new User();
         user.setName(signUpRequest.name());
         user.setEmail(signUpRequest.email());
         user.setPasswordHash(encoder.encode(signUpRequest.password()));
         
-        // Set default budget if not provided
         BigDecimal budget = signUpRequest.budget() != null ? signUpRequest.budget() : new BigDecimal("5000.00");
         user.setBudget(budget);
 
         User savedUser = userRepository.save(user);
 
-        // Auto-login the new user
         Authentication authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(signUpRequest.email(), signUpRequest.password())
         );
@@ -130,6 +135,9 @@ public class AuthController {
                 .body(new JwtResponse(accessToken, refreshToken, expiresAt, userResponse));
     }
 
+    /**
+     * Refreshes access token using a valid refresh token.
+     */
     @Operation(summary = "Refresh access token", description = "Use refresh token to obtain a new access token")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Token refreshed successfully"),
@@ -146,7 +154,6 @@ public class AuthController {
                 User user = userRepository.findByEmail(email)
                         .orElseThrow(() -> new RuntimeException("User not found"));
 
-                // Generate new access token
                 UserPrincipal userPrincipal = UserPrincipal.build(user);
                 Authentication auth = new UsernamePasswordAuthenticationToken(
                         userPrincipal, null, userPrincipal.getAuthorities());
@@ -172,6 +179,9 @@ public class AuthController {
         }
     }
 
+    /**
+     * Logs out user by clearing security context.
+     */
     @Operation(summary = "Logout user", description = "Logout current user (client should discard tokens)")
     @ApiResponse(responseCode = "200", description = "Logout successful")
     @PostMapping("/logout")
@@ -180,6 +190,9 @@ public class AuthController {
         return ResponseEntity.ok(new MessageResponse("Logout successful"));
     }
 
+    /**
+     * Verifies JWT token validity and returns user information.
+     */
     @Operation(summary = "Verify token", description = "Verify if the current JWT token is valid")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Token is valid"),
@@ -187,7 +200,6 @@ public class AuthController {
     })
     @GetMapping("/verify")
     public ResponseEntity<?> verifyToken() {
-        // If we reach here, the token is valid (filtered by AuthTokenFilter)
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         
         if (authentication != null && authentication.isAuthenticated()) {
@@ -207,6 +219,9 @@ public class AuthController {
                 .body(new MessageResponse("Invalid token"));
     }
 
+    /**
+     * Changes password for the authenticated user.
+     */
     @Operation(summary = "Change password", description = "Change password for authenticated user")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Password changed successfully"),
@@ -225,17 +240,14 @@ public class AuthController {
 
             UserPrincipal userPrincipal = (UserPrincipal) authentication.getPrincipal();
             
-            // Find the user in the database
             User user = userRepository.findById(userPrincipal.getId())
                     .orElseThrow(() -> new RuntimeException("User not found"));
 
-            // Verify current password
             if (!encoder.matches(request.currentPassword(), user.getPasswordHash())) {
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                         .body(new MessageResponse("Current password is incorrect"));
             }
 
-            // Update to new password
             user.setPasswordHash(encoder.encode(request.newPassword()));
             userRepository.save(user);
 

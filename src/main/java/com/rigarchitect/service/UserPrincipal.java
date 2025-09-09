@@ -32,6 +32,9 @@ public class UserPrincipal implements UserDetails {
     @JsonIgnore
     private final String password;
 
+    /**
+     * Constructor for UserPrincipal with all required fields.
+     */
     public UserPrincipal(Long id, String name, String email, String password, BigDecimal budget) {
         this.id = id;
         this.name = name;
@@ -40,6 +43,9 @@ public class UserPrincipal implements UserDetails {
         this.budget = budget;
     }
 
+    /**
+     * Factory method to create UserPrincipal from User entity.
+     */
     public static UserPrincipal build(User user) {
         return new UserPrincipal(
                 user.getId(),
@@ -50,39 +56,58 @@ public class UserPrincipal implements UserDetails {
         );
     }
 
+    /**
+     * Returns user authorities (currently empty - no role-based auth implemented).
+     */
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        // For now, all users have the same basic role
-        // Future: implement role-based authorization
         return Collections.emptyList();
     }
 
 
+    /**
+     * Returns the user's password for authentication.
+     */
     @Override
     public String getPassword() {
         return password;
     }
 
+    /**
+     * Returns the username (email) for authentication.
+     */
     @Override
     public String getUsername() {
-        return email; // Use email as username
+        return email;
     }
 
+    /**
+     * Account expiration check (always returns true).
+     */
     @Override
     public boolean isAccountNonExpired() {
         return true;
     }
 
+    /**
+     * Account lock check (always returns true).
+     */
     @Override
     public boolean isAccountNonLocked() {
         return true;
     }
 
+    /**
+     * Credential expiration check (always returns true).
+     */
     @Override
     public boolean isCredentialsNonExpired() {
         return true;
     }
 
+    /**
+     * Account enabled check (always returns true).
+     */
     @Override
     public boolean isEnabled() {
         return true;

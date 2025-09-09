@@ -11,10 +11,18 @@ import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * Global exception handler for handling various exceptions across the application.
+ */
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-    // Handle validation errors (e.g. @Valid DTO fields)
+    /**
+     * Handles validation errors from method argument validation.
+     *
+     * @param ex the validation exception
+     * @return error response with validation details
+     */
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<Map<String, Object>> handleValidationErrors(MethodArgumentNotValidException ex) {
         Map<String, Object> body = new HashMap<>();
@@ -32,7 +40,12 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(body, HttpStatus.BAD_REQUEST);
     }
 
-    // Handle generic runtime errors
+    /**
+     * Handles generic runtime exceptions.
+     *
+     * @param ex the runtime exception
+     * @return error response with exception details
+     */
     @ExceptionHandler(RuntimeException.class)
     public ResponseEntity<Map<String, Object>> handleRuntimeException(RuntimeException ex) {
         Map<String, Object> body = new HashMap<>();
@@ -44,7 +57,12 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(body, HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
-    // Handle resource not found
+    /**
+     * Handles resource not found exceptions.
+     *
+     * @param ex the resource not found exception
+     * @return error response with not found details
+     */
     @ExceptionHandler(ResourceNotFoundException.class)
     public ResponseEntity<Map<String, Object>> handleNotFound(ResourceNotFoundException ex) {
         Map<String, Object> body = new HashMap<>();

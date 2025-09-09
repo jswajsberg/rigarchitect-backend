@@ -38,7 +38,6 @@ public record ComponentRequest(
         @Min(value = 0, message = "Stock quantity must be zero or greater")
         Integer stockQuantity,
 
-        // Optional fields for compatibility
         @Schema(description = "CPU socket type, if applicable", example = "AM4")
         String socket,
 

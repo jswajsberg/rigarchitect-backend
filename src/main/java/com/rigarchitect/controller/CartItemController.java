@@ -24,6 +24,9 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.Optional;
 
+/**
+ * REST controller for managing cart items within build carts.
+ */
 @RestController
 @RequestMapping("/api/v1/items")
 @CrossOrigin(origins = "http://localhost:5173")
@@ -33,6 +36,9 @@ public class CartItemController {
     private final BuildCartService buildCartService;
     private final ComponentService componentService;
 
+    /**
+     * Constructor for dependency injection.
+     */
     public CartItemController(CartItemService cartItemService,
                               BuildCartService buildCartService,
                               ComponentService componentService) {
@@ -41,6 +47,9 @@ public class CartItemController {
         this.componentService = componentService;
     }
 
+    /**
+     * Retrieves a single cart item by its ID.
+     */
     @Operation(summary = "Get a cart item by ID", description = "Retrieve a single cart item using its ID")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Cart item retrieved successfully"),
@@ -57,6 +66,9 @@ public class CartItemController {
                 .orElseThrow(() -> new ResourceNotFoundException("Cart item with ID " + id + " not found"));
     }
 
+    /**
+     * Retrieves all items in a specific build cart.
+     */
     @Operation(summary = "Get all items in a cart", description = "Retrieve all items in a specific cart")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Cart items retrieved successfully"),
@@ -78,6 +90,9 @@ public class CartItemController {
         return ResponseEntity.ok(items);
     }
 
+    /**
+     * Adds a new item to a cart or updates quantity if item already exists.
+     */
     @Operation(summary = "Create a new cart item", description = "Add a new item to a build cart")
     @ApiResponses({
             @ApiResponse(responseCode = "201", description = "Cart item created successfully"),
@@ -88,14 +103,12 @@ public class CartItemController {
             @Valid @RequestBody CartItemRequest request) {
 
         try {
-            // Check if a component already exists in a cart
             BuildCart buildCart = buildCartService.getCartById(request.cartId())
                     .orElseThrow(() -> new ResourceNotFoundException("Cart with ID " + request.cartId() + " not found"));
 
             Optional<CartItem> existingItem = cartItemService.findByCartAndComponent(buildCart, request.componentId());
 
             if (existingItem.isPresent()) {
-                // Update quantity of existing item
                 CartItem existing = existingItem.get();
                 int newQuantity = existing.getQuantity() + request.quantity();
 
@@ -104,14 +117,12 @@ public class CartItemController {
 
                 return ResponseEntity.ok(toResponse(updated));
             } else {
-                // Create a new item
                 CartItem cartItem = toEntity(request);
                 CartItem saved = cartItemService.saveItem(cartItem);
                 return ResponseEntity.status(HttpStatus.CREATED).body(toResponse(saved));
             }
 
         } catch (DataIntegrityViolationException e) {
-            // Handle race condition
             if (e.getMessage().contains("unique_cart_component")) {
                 BuildCart buildCart = buildCartService.getCartById(request.cartId())
                         .orElseThrow(() -> new ResourceNotFoundException("Cart with ID " + request.cartId() + " not found"));
@@ -129,6 +140,9 @@ public class CartItemController {
         }
     }
 
+    /**
+     * Updates the quantity of an existing cart item.
+     */
     @Operation(summary = "Update quantity of a cart item", description = "Update the quantity of an existing cart item")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Cart item updated successfully"),
@@ -146,6 +160,9 @@ public class CartItemController {
                 .orElseThrow(() -> new ResourceNotFoundException("Cart item with ID " + id + " not found"));
     }
 
+    /**
+     * Removes a cart item by its ID.
+     */
     @Operation(summary = "Delete a cart item", description = "Remove a cart item by ID")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Cart item deleted successfully"),
@@ -160,6 +177,9 @@ public class CartItemController {
         return ResponseEntity.ok(new MessageResponse("Cart item deleted successfully"));
     }
 
+    /**
+     * Removes all items from a specific cart in one operation.
+     */
     @Operation(summary = "Clear all items from cart", description = "Remove all items from a specific cart in one operation")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "All cart items removed successfully"),
@@ -178,7 +198,6 @@ public class CartItemController {
         }
     }
 
-    // Helper methods
     private CartItemResponse toResponse(CartItem cartItem) {
         return new CartItemResponse(
                 cartItem.getId(),

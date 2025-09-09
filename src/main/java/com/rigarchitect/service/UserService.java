@@ -4,6 +4,8 @@ import com.rigarchitect.dto.user.UserRequest;
 import com.rigarchitect.dto.user.UserResponse;
 import com.rigarchitect.model.User;
 import com.rigarchitect.repository.UserRepository;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -12,27 +14,40 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+/**
+ * Service for managing user operations including CRUD and authentication support.
+ * Handles user creation, updates, budget management, and DTO conversions.
+ */
 @Service
 public class UserService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
 
+    /**
+     * Constructor with required dependencies.
+     */
     public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
     }
 
-    // For controller/service internal use
+    /**
+     * Gets user entity by ID for internal service use.
+     */
     public Optional<User> getUserEntityById(Long id) {
         return userRepository.findById(id);
     }
 
-    // For API responses
+    /**
+     * Gets user response DTO by ID for API responses.
+     */
     public Optional<UserResponse> getUserById(Long id) {
         return userRepository.findById(id).map(this::toResponse);
     }
 
-    // NEW: Get all users for selection
+    /**
+     * Gets all users as response DTOs.
+     */
     public List<UserResponse> getAllUsers() {
         return userRepository.findAll()
                 .stream()
@@ -40,24 +55,35 @@ public class UserService {
                 .collect(Collectors.toList());
     }
 
-    // NEW: Get the current user (hardcoded to first user for now, easily replaceable with auth later)
+    /**
+     * Gets the currently authenticated user from security context.
+     */
     public Optional<UserResponse> getCurrentUser() {
-        List<User> users = userRepository.findAll();
-        if (users.isEmpty()) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        
+        if (authentication == null || !authentication.isAuthenticated() || 
+            authentication.getPrincipal().equals("anonymousUser")) {
             return Optional.empty();
         }
-        // For now, return the first user. This will be replaced with authenticated user later
-        return Optional.of(toResponse(users.get(0)));
+        
+        UserPrincipal userPrincipal = (UserPrincipal) authentication.getPrincipal();
+        return getUserById(userPrincipal.getId());
     }
 
 
 
+    /**
+     * Creates a new user from request data.
+     */
     public UserResponse createUser(UserRequest request) {
         User user = toEntity(request);
         User saved = userRepository.save(user);
         return toResponse(saved);
     }
 
+    /**
+     * Updates an existing user with new data.
+     */
     public Optional<UserResponse> updateUser(Long id, UserRequest request) {
         return userRepository.findById(id)
                 .map(existing -> {
@@ -68,7 +94,9 @@ public class UserService {
                 });
     }
 
-    // NEW: Update just the budget (useful for cart operations)
+    /**
+     * Updates only the user's budget, useful for cart finalization.
+     */
     public Optional<UserResponse> updateUserBudget(Long id, BigDecimal newBudget) {
         return userRepository.findById(id)
                 .map(existing -> {
@@ -77,17 +105,24 @@ public class UserService {
                 });
     }
 
+    /**
+     * Deletes a user by ID.
+     */
     public void deleteUser(Long id) {
         userRepository.deleteById(id);
     }
 
-    // NEW: Find user by email (useful for user lookup)
+    /**
+     * Finds a user by email address.
+     */
     public Optional<UserResponse> getUserByEmail(String email) {
         return userRepository.findByEmail(email).map(this::toResponse);
     }
 
-    // --- DTO ↔ Entity mapping methods ---
 
+    /**
+     * Converts User entity to UserResponse DTO.
+     */
     private UserResponse toResponse(User user) {
         return new UserResponse(
                 user.getId(),
@@ -99,13 +134,14 @@ public class UserService {
         );
     }
 
+    /**
+     * Converts UserRequest DTO to User entity with temporary password.
+     */
     private User toEntity(UserRequest request) {
         User user = new User();
         user.setName(request.name());
         user.setEmail(request.email());
         user.setBudget(request.budget());
-        // Set a default password hash for users created via UserRequest (admin/system users)
-        // These users will need to reset their password to log in
         user.setPasswordHash(passwordEncoder.encode("temp_password_" + System.currentTimeMillis()));
         return user;
     }

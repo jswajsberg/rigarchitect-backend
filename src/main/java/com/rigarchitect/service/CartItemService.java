@@ -9,30 +9,45 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.Optional;
 
+/**
+ * Service for managing cart items within build carts.
+ * Handles CRUD operations and automatic cart total recalculation.
+ */
 @Service
 public class CartItemService {
 
     private final CartItemRepository cartItemRepository;
     private final BuildCartService buildCartService;
 
+    /**
+     * Constructor with required service and repository dependencies.
+     */
     public CartItemService(CartItemRepository cartItemRepository, BuildCartService buildCartService) {
         this.cartItemRepository = cartItemRepository;
         this.buildCartService = buildCartService;
     }
 
+    /**
+     * Gets all items in a specific build cart.
+     */
     public List<CartItem> getItemsByCart(BuildCart buildCart) {
         return cartItemRepository.findByBuildCart(buildCart);
     }
 
+    /**
+     * Gets a cart item by its ID.
+     */
     public Optional<CartItem> getItemById(Long id) {
         return cartItemRepository.findById(id);
     }
 
+    /**
+     * Saves a cart item and recalculates the cart's total price.
+     */
     @Transactional
     public CartItem saveItem(CartItem cartItem) {
         CartItem saved = cartItemRepository.save(cartItem);
 
-        // Recalculate and save cart total
         BuildCart cart = saved.getBuildCart();
         cart.recalculateTotalPrice();
         buildCartService.saveCart(cart);
@@ -40,18 +55,18 @@ public class CartItemService {
         return saved;
     }
 
+    /**
+     * Deletes a cart item and recalculates the cart's total price.
+     */
     @Transactional
     public void deleteItem(Long id) {
-        // Get the cart ID before deleting the item
         Optional<CartItem> itemOpt = cartItemRepository.findById(id);
         if (itemOpt.isPresent()) {
             Long cartId = itemOpt.get().getBuildCartId();
 
-            // Delete the item
             cartItemRepository.deleteById(id);
-            cartItemRepository.flush(); // Ensure deletion is complete
+            cartItemRepository.flush();
 
-            // Recalculate cart total
             if (cartId != null) {
                 Optional<BuildCart> cartOpt = buildCartService.getCartById(cartId);
                 if (cartOpt.isPresent()) {
@@ -64,34 +79,32 @@ public class CartItemService {
     }
 
     /**
-     * Remove all items from a cart in a single transaction
-     * @param cartId the ID of the cart to clear
+     * Removes all items from a cart and resets total to zero.
      */
     @Transactional
     public void deleteAllItemsInCart(Long cartId) {
-        // Verify cart exists first
         Optional<BuildCart> cartOpt = buildCartService.getCartById(cartId);
         if (cartOpt.isEmpty()) {
             throw new IllegalArgumentException("Cart with ID " + cartId + " not found");
         }
 
-        // Delete all items in the cart
         cartItemRepository.deleteByBuildCartId(cartId);
-        cartItemRepository.flush(); // Ensure deletion completes
+        cartItemRepository.flush();
 
-        // Reset cart total to zero
         BuildCart cart = cartOpt.get();
-        cart.recalculateTotalPrice(); // This will set the total to 0 since no items remain
+        cart.recalculateTotalPrice();
         buildCartService.saveCart(cart);
     }
 
+    /**
+     * Updates the quantity of a cart item and recalculates cart total.
+     */
     @Transactional
     public Optional<CartItem> updateQuantity(Long itemId, int newQuantity) {
         return cartItemRepository.findById(itemId).map(item -> {
             item.setQuantity(newQuantity);
             CartItem updated = cartItemRepository.save(item);
 
-            // Recalculate and save cart total
             BuildCart cart = updated.getBuildCart();
             cart.recalculateTotalPrice();
             buildCartService.saveCart(cart);
@@ -100,6 +113,9 @@ public class CartItemService {
         });
     }
 
+    /**
+     * Finds a cart item by cart and component ID (used to prevent duplicates).
+     */
     public Optional<CartItem> findByCartAndComponent(BuildCart buildCart, Long componentId) {
         return cartItemRepository.findByBuildCartAndComponent_Id(buildCart, componentId);
     }

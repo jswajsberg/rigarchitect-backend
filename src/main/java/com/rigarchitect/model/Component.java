@@ -52,12 +52,10 @@ public class Component extends BaseEntity {
     @ColumnDefault("0")
     private Integer stockQuantity = 0;
 
-    // Ignore this field during JSON serialization to prevent circular references
     @OneToMany(mappedBy = "component", fetch = FetchType.LAZY)
     @JsonIgnore
     private List<CartItem> cartItems;
 
-    // Existing compatibility fields
     @Column(length = 20)
     private String socket;
 
@@ -85,7 +83,6 @@ public class Component extends BaseEntity {
     @Column(name = "extra_compatibility", columnDefinition = "jsonb")
     private Map<String, Object> extraCompatibility;
 
-    // Single metadata field for enhanced functionality
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "metadata", columnDefinition = "jsonb")
     private Map<String, Object> metadata;

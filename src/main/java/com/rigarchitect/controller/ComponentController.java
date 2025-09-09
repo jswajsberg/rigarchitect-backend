@@ -19,6 +19,9 @@ import org.springframework.web.bind.annotation.*;
 import java.math.BigDecimal;
 import java.util.List;
 
+/**
+ * REST controller for managing PC components with filtering, pagination, and CRUD operations.
+ */
 @RestController
 @RequestMapping("/api/v1/components")
 @CrossOrigin(origins = "http://localhost:5173")
@@ -26,11 +29,16 @@ public class ComponentController {
 
     private final ComponentService componentService;
 
+    /**
+     * Constructor for dependency injection.
+     */
     public ComponentController(ComponentService componentService) {
         this.componentService = componentService;
     }
 
-    // Existing non-paginated endpoints (kept for backward compatibility)
+    /**
+     * Retrieves all components without pagination.
+     */
     @Operation(summary = "Get all components", description = "Retrieve all components in the catalog (non-paginated)")
     @ApiResponse(responseCode = "200", description = "List of all components")
     @GetMapping
@@ -39,6 +47,9 @@ public class ComponentController {
         return ResponseEntity.ok(components);
     }
 
+    /**
+     * Retrieves all components of a specific type without pagination.
+     */
     @Operation(summary = "Get components by type", description = "Retrieve all components of a specific type (non-paginated)")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Components retrieved successfully")
@@ -52,7 +63,9 @@ public class ComponentController {
         return ResponseEntity.ok(components);
     }
 
-    // New paginated endpoints
+    /**
+     * Retrieves all components with pagination and filtering support.
+     */
     @Operation(summary = "Get all components (paginated)", description = "Retrieve all components with pagination support")
     @ApiResponse(responseCode = "200", description = "Paginated list of components")
     @GetMapping("/paged")
@@ -73,6 +86,9 @@ public class ComponentController {
         return ResponseEntity.ok(response);
     }
 
+    /**
+     * Retrieves components of a specific type with pagination and filtering.
+     */
     @Operation(summary = "Get components by type (paginated)", description = "Retrieve components of a specific type with pagination")
     @GetMapping("/type/{type}/paged")
     public ResponseEntity<PagedResponse<ComponentResponse>> getComponentsByTypePaged(
@@ -93,6 +109,9 @@ public class ComponentController {
         return ResponseEntity.ok(response);
     }
 
+    /**
+     * Retrieves components by brand with pagination support.
+     */
     @Operation(summary = "Get components by brand (paginated)", description = "Retrieve components by brand with pagination")
     @GetMapping("/brand/{brand}/paged")
     public ResponseEntity<PagedResponse<ComponentResponse>> getComponentsByBrandPaged(
@@ -106,6 +125,9 @@ public class ComponentController {
         return ResponseEntity.ok(response);
     }
 
+    /**
+     * Searches components using multiple filters with pagination support.
+     */
     @Operation(summary = "Search components (paginated)", description = "Search components with multiple filters and pagination")
     @GetMapping("/search/paged")
     public ResponseEntity<PagedResponse<ComponentResponse>> searchComponentsPaged(
@@ -128,6 +150,9 @@ public class ComponentController {
         return ResponseEntity.ok(response);
     }
 
+    /**
+     * Retrieves components currently in stock with pagination support.
+     */
     @Operation(summary = "Get components in stock (paginated)", description = "Retrieve components in stock with pagination")
     @GetMapping("/in-stock/paged")
     public ResponseEntity<PagedResponse<ComponentResponse>> getComponentsInStockPaged(
@@ -141,7 +166,9 @@ public class ComponentController {
         return ResponseEntity.ok(response);
     }
 
-    // Existing endpoints remain unchanged
+    /**
+     * Retrieves a single component by its ID.
+     */
     @Operation(summary = "Get a component by ID", description = "Retrieve a single component using its ID")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Component retrieved successfully"),
@@ -157,6 +184,9 @@ public class ComponentController {
                 .orElseThrow(() -> new ResourceNotFoundException("Component not found with id: " + id));
     }
 
+    /**
+     * Creates a new component in the catalog.
+     */
     @Operation(summary = "Create a new component", description = "Add a new component to the catalog")
     @ApiResponse(responseCode = "201", description = "Component created successfully")
     @PostMapping
@@ -167,6 +197,9 @@ public class ComponentController {
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
+    /**
+     * Updates an existing component in the catalog.
+     */
     @Operation(summary = "Update an existing component", description = "Update a component in the catalog")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Component updated successfully"),
@@ -183,6 +216,9 @@ public class ComponentController {
                 .orElseThrow(() -> new ResourceNotFoundException("Component not found with id: " + id));
     }
 
+    /**
+     * Deletes a component from the catalog.
+     */
     @Operation(summary = "Delete a component", description = "Remove a component from the catalog")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Component deleted successfully"),
@@ -193,7 +229,6 @@ public class ComponentController {
             @Parameter(description = "ID of the component to delete", required = true)
             @PathVariable Long id) {
 
-        // Verify component exists before deletion
         componentService.getComponentById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Component not found with id: " + id));
 
@@ -201,6 +236,9 @@ public class ComponentController {
         return ResponseEntity.ok(new MessageResponse("Component deleted successfully"));
     }
 
+    /**
+     * Retrieves all components from a specific brand without pagination.
+     */
     @Operation(summary = "Get components by brand", description = "Retrieve all components from a specific brand")
     @GetMapping("/brand/{brand}")
     public ResponseEntity<List<ComponentResponse>> getComponentsByBrand(
@@ -211,6 +249,9 @@ public class ComponentController {
         return ResponseEntity.ok(components);
     }
 
+    /**
+     * Retrieves components filtered by socket type without pagination.
+     */
     @Operation(summary = "Get components by socket", description = "Retrieve components filtered by socket type")
     @GetMapping("/socket/{socket}")
     public ResponseEntity<List<ComponentResponse>> getComponentsBySocket(
@@ -221,6 +262,9 @@ public class ComponentController {
         return ResponseEntity.ok(components);
     }
 
+    /**
+     * Retrieves components filtered by compatibility tag without pagination.
+     */
     @Operation(summary = "Get components by compatibility tag", description = "Retrieve components filtered by compatibility tag")
     @GetMapping("/compatibility/{tag}")
     public ResponseEntity<List<ComponentResponse>> getComponentsByCompatibilityTag(
@@ -231,6 +275,9 @@ public class ComponentController {
         return ResponseEntity.ok(components);
     }
 
+    /**
+     * Searches components using multiple filters without pagination.
+     */
     @Operation(summary = "Search components", description = "Search components using multiple optional filters")
     @GetMapping("/search")
     public ResponseEntity<List<ComponentResponse>> searchComponents(
@@ -244,6 +291,9 @@ public class ComponentController {
         return ResponseEntity.ok(components);
     }
 
+    /**
+     * Retrieves components currently in stock without pagination.
+     */
     @Operation(summary = "Get components in stock", description = "Retrieve components with at least minQuantity in stock")
     @GetMapping("/in-stock")
     public ResponseEntity<List<ComponentResponse>> getComponentsInStock(

@@ -21,7 +21,7 @@ import java.util.Arrays;
 import java.util.List;
 
 /**
- * Main Security Configuration for JWT-based authentication
+ * Security configuration for JWT-based authentication with CORS support.
  */
 @Configuration
 @EnableWebSecurity
@@ -33,11 +33,17 @@ public class WebSecurityConfig {
         this.unauthorizedHandler = unauthorizedHandler;
     }
 
+    /**
+     * Creates JWT authentication filter.
+     */
     @Bean
     public AuthTokenFilter authenticationJwtTokenFilter() {
         return new AuthTokenFilter();
     }
 
+    /**
+     * Configures authentication manager with BCrypt encoding.
+     */
     @Bean
     public AuthenticationManager authenticationManager(UserDetailsServiceImpl userDetailsService) {
         DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider();
@@ -46,11 +52,17 @@ public class WebSecurityConfig {
         return new org.springframework.security.authentication.ProviderManager(authProvider);
     }
 
+    /**
+     * Provides BCrypt password encoder.
+     */
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
 
+    /**
+     * Configures security filter chain with JWT authentication.
+     */
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http.cors(cors -> cors.configurationSource(corsConfigurationSource()))
@@ -58,33 +70,27 @@ public class WebSecurityConfig {
                 .exceptionHandling(exception -> exception.authenticationEntryPoint(unauthorizedHandler))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(authz -> authz
-                        // Public endpoints - no authentication required
-                        .requestMatchers("/api/v1/auth/**").permitAll()
-                        .requestMatchers("/api/v1/users/email/**").permitAll() // Temporary for frontend compatibility
-                        .requestMatchers("/api/v1/users").permitAll() // Temporary for frontend compatibility
-                        .requestMatchers("/api/v1/components/**").permitAll()
-                        
-                        // Swagger/OpenAPI documentation
-                        .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
-                        
-                        // Health check endpoints
-                        .requestMatchers("/actuator/health", "/health").permitAll()
-                        
-                        // All other endpoints require authentication
-                        .anyRequest().authenticated()
+                        .requestMatchers("/api/v1/auth/**").permitAll() // Auth endpoints
+                        .requestMatchers("/api/v1/users/email/**").permitAll() // Temporary
+                        .requestMatchers("/api/v1/users").permitAll() // Temporary
+                        .requestMatchers("/api/v1/components/**").permitAll() // Public components
+                        .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll() // API docs
+                        .requestMatchers("/actuator/health", "/health").permitAll() // Health checks
+                        .anyRequest().authenticated() // All others require auth
                 );
 
-        // Authentication is handled by the custom AuthenticationManager bean
         http.addFilterBefore(authenticationJwtTokenFilter(), UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
 
+    /**
+     * Configures CORS to allow frontend requests during development.
+     */
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
         
-        // Allow requests from the frontend during development
         configuration.setAllowedOriginPatterns(Arrays.asList("http://localhost:*", "https://localhost:*"));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("*"));

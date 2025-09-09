@@ -12,15 +12,15 @@ import org.springframework.lang.NonNull;
 import java.math.BigDecimal;
 import java.util.List;
 
+/**
+ * Repository interface for Component entities with comprehensive filtering and pagination support.
+ */
 @SuppressWarnings("unused")
 public interface ComponentRepository extends JpaRepository<Component, Long> {
-
-    // Existing non-paginated methods (keep for backward compatibility where needed)
     List<Component> findByType(ComponentType type);
     List<Component> findByBrand(String brand);
     List<Component> findBySocket(String socket);
 
-    // New paginated methods
     @NonNull
     Page<Component> findAll(@NonNull Pageable pageable);
 
@@ -30,23 +30,19 @@ public interface ComponentRepository extends JpaRepository<Component, Long> {
 
     Page<Component> findBySocket(String socket, Pageable pageable);
 
-    // Paginated compatibility tag search
     @Query("SELECT c FROM Component c WHERE LOWER(c.compatibilityTag) LIKE LOWER(CONCAT('%', :tag, '%'))")
     Page<Component> findByCompatibilityTag(@Param("tag") String tag, Pageable pageable);
 
-    // Paginated combined queries
     Page<Component> findByTypeAndBrand(ComponentType type, String brand, Pageable pageable);
 
     Page<Component> findByTypeAndSocket(ComponentType type, String socket, Pageable pageable);
 
     Page<Component> findByTypeAndPriceLessThanEqual(ComponentType type, BigDecimal maxPrice, Pageable pageable);
 
-    // Paginated stock queries
     Page<Component> findByStockQuantityGreaterThan(Integer quantity, Pageable pageable);
 
     Page<Component> findByTypeAndStockQuantityGreaterThan(ComponentType type, Integer quantity, Pageable pageable);
 
-    // Complex paginated search query
     @Query("SELECT c FROM Component c WHERE " +
             "(:type IS NULL OR c.type = :type) AND " +
             "(:brand IS NULL OR LOWER(c.brand) LIKE LOWER(CONCAT('%', :brand, '%'))) AND " +
@@ -62,7 +58,6 @@ public interface ComponentRepository extends JpaRepository<Component, Long> {
             Pageable pageable
     );
 
-    // Comprehensive search query with all filters including search term  
     @Query(value = "SELECT * FROM components c WHERE " +
             "(:searchTerm IS NULL OR " +
             "c.name ILIKE CONCAT('%', :searchTerm, '%') OR " +
@@ -86,7 +81,6 @@ public interface ComponentRepository extends JpaRepository<Component, Long> {
             Pageable pageable
     );
 
-    // Keep existing non-paginated methods for specific use cases
     @Query("SELECT c FROM Component c WHERE LOWER(c.compatibilityTag) LIKE LOWER(CONCAT('%', :tag, '%'))")
     List<Component> findByCompatibilityTag(@Param("tag") String tag);
 

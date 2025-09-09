@@ -17,6 +17,10 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+/**
+ * REST controller for user management operations.
+ * Provides CRUD operations for user entities and budget management.
+ */
 @RestController
 @RequestMapping("/api/v1/users")
 @CrossOrigin(origins = "http://localhost:5173")
@@ -24,10 +28,16 @@ public class UserController {
 
     private final UserService userService;
 
+    /**
+     * Constructor with user service dependency.
+     */
     public UserController(UserService userService) {
         this.userService = userService;
     }
 
+    /**
+     * Gets all users in the system.
+     */
     @Operation(summary = "Get all users", description = "Retrieve all users in the system")
     @ApiResponse(responseCode = "200", description = "Users retrieved successfully")
     @GetMapping
@@ -36,6 +46,9 @@ public class UserController {
         return ResponseEntity.ok(users);
     }
 
+    /**
+     * Gets the current user (temporary implementation).
+     */
     @Operation(summary = "Get current user", description = "Get the currently active user (hardcoded for now, will be authenticated user later)")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Current user retrieved successfully"),
@@ -48,6 +61,9 @@ public class UserController {
                 .orElseThrow(() -> new ResourceNotFoundException("No users found in the system"));
     }
 
+    /**
+     * Gets a user by their ID.
+     */
     @Operation(summary = "Get user by ID", description = "Retrieve a single user by their unique ID")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "User retrieved successfully"),
@@ -63,6 +79,9 @@ public class UserController {
                 .orElseThrow(() -> new ResourceNotFoundException("User with ID " + id + " not found"));
     }
 
+    /**
+     * Gets a user by their email address.
+     */
     @Operation(summary = "Get user by email", description = "Retrieve a user by their email address")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "User retrieved successfully"),
@@ -78,6 +97,9 @@ public class UserController {
                 .orElseThrow(() -> new ResourceNotFoundException("User with email " + email + " not found"));
     }
 
+    /**
+     * Creates a new user.
+     */
     @Operation(summary = "Create a new user", description = "Add a new user to the system")
     @ApiResponse(responseCode = "201", description = "User created successfully")
     @PostMapping
@@ -88,6 +110,9 @@ public class UserController {
         return ResponseEntity.status(HttpStatus.CREATED).body(savedUser);
     }
 
+    /**
+     * Updates an existing user's details.
+     */
     @Operation(summary = "Update user", description = "Update an existing user's details by ID")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "User updated successfully"),
@@ -104,6 +129,9 @@ public class UserController {
                 .orElseThrow(() -> new ResourceNotFoundException("User with ID " + id + " not found"));
     }
 
+    /**
+     * Updates only a user's budget.
+     */
     @Operation(summary = "Update user budget", description = "Update only the budget for a specific user")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "User budget updated successfully"),
@@ -120,6 +148,9 @@ public class UserController {
                 .orElseThrow(() -> new ResourceNotFoundException("User with ID " + id + " not found"));
     }
 
+    /**
+     * Deletes a user by ID.
+     */
     @Operation(summary = "Delete user", description = "Remove a user from the system by ID")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "User deleted successfully"),

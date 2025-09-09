@@ -20,6 +20,9 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.stream.Collectors;
 
+/**
+ * REST controller for managing build carts and their lifecycle operations.
+ */
 @RestController
 @RequestMapping("/api/v1/carts")
 @CrossOrigin(origins = "http://localhost:5173")
@@ -28,11 +31,17 @@ public class BuildCartController {
     private final BuildCartService buildCartService;
     private final UserService userService;
 
+    /**
+     * Constructor for dependency injection.
+     */
     public BuildCartController(BuildCartService buildCartService, UserService userService) {
         this.buildCartService = buildCartService;
         this.userService = userService;
     }
 
+    /**
+     * Retrieves all build carts for a specific user.
+     */
     @Operation(summary = "Get all carts for a user", description = "Returns all build carts for the specified user")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Carts retrieved successfully"),
@@ -54,6 +63,9 @@ public class BuildCartController {
         return ResponseEntity.ok(responses);
     }
 
+    /**
+     * Retrieves a single build cart by its ID.
+     */
     @Operation(summary = "Get a cart by ID", description = "Returns a single build cart by its ID")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Cart retrieved successfully"),
@@ -70,6 +82,9 @@ public class BuildCartController {
                 .orElseThrow(() -> new ResourceNotFoundException("Cart with ID " + id + " not found"));
     }
 
+    /**
+     * Creates a new build cart for a specific user.
+     */
     @Operation(summary = "Create a cart for a user", description = "Creates a new build cart for the specified user")
     @ApiResponses({
             @ApiResponse(responseCode = "201", description = "Cart created successfully"),
@@ -91,6 +106,9 @@ public class BuildCartController {
         return ResponseEntity.status(HttpStatus.CREATED).body(toResponse(saved));
     }
 
+    /**
+     * Finalizes a build cart and updates the associated user's budget.
+     */
     @Operation(summary = "Finalize a cart", description = "Finalizes the build cart and updates user budget")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Cart finalized successfully"),
@@ -109,6 +127,9 @@ public class BuildCartController {
         }
     }
 
+    /**
+     * Deletes a build cart by its ID.
+     */
     @Operation(summary = "Delete a cart", description = "Deletes a build cart by ID")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Cart deleted successfully"),
@@ -126,6 +147,9 @@ public class BuildCartController {
         return ResponseEntity.ok(new MessageResponse("Build with ID " + id + " deleted successfully"));
     }
 
+    /**
+     * Updates the name and status of an existing build cart.
+     */
     @Operation(summary = "Update a cart", description = "Updates the name and status of a build cart")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Cart updated successfully"),
@@ -145,8 +169,6 @@ public class BuildCartController {
                 })
                 .orElseThrow(() -> new ResourceNotFoundException("Cart with ID " + id + " not found"));
     }
-
-    // --- Helper Methods ---
 
     private BuildCartResponse toResponse(BuildCart cart) {
         return new BuildCartResponse(
