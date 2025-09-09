@@ -80,6 +80,30 @@ CREATE INDEX idx_build_carts_status ON build_carts(status);
 CREATE INDEX idx_cart_items_cart_id ON cart_items(cart_id);
 CREATE INDEX idx_cart_items_component_id ON cart_items(component_id);
 
+-- Create Guest Sessions table
+CREATE TABLE guest_sessions (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    session_id VARCHAR(255) NOT NULL UNIQUE,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    expires_at TIMESTAMP NOT NULL DEFAULT (CURRENT_TIMESTAMP + INTERVAL '30 days'),
+    last_accessed TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Create Guest Builds table
+CREATE TABLE guest_builds (
+    id SERIAL PRIMARY KEY,
+    session_id VARCHAR(255) NOT NULL REFERENCES guest_sessions(session_id) ON DELETE CASCADE,
+    build_data JSONB NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Create indexes for guest functionality
+CREATE INDEX idx_guest_sessions_session_id ON guest_sessions(session_id);
+CREATE INDEX idx_guest_sessions_expires_at ON guest_sessions(expires_at);
+CREATE INDEX idx_guest_builds_session_id ON guest_builds(session_id);
+CREATE INDEX idx_guest_builds_updated_at ON guest_builds(updated_at);
+
 -- Create function to update updated_at timestamp (optional enhancement)
 -- Note: The original schema relies on JPA @PreUpdate for timestamp management
 -- This function provides database-level timestamp updates as a backup
@@ -105,4 +129,7 @@ $$ language 'plpgsql';
 --     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- CREATE TRIGGER update_cart_items_updated_at BEFORE UPDATE ON cart_items 
+--     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- CREATE TRIGGER update_guest_builds_updated_at BEFORE UPDATE ON guest_builds 
 --     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();

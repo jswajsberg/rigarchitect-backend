@@ -71,6 +71,7 @@ public class WebSecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(authz -> authz
                         .requestMatchers("/api/v1/auth/**").permitAll() // Auth endpoints
+                        .requestMatchers("/api/v1/guest/**").permitAll() // Guest endpoints
                         .requestMatchers("/api/v1/users/email/**").permitAll() // Temporary
                         .requestMatchers("/api/v1/users").permitAll() // Temporary
                         .requestMatchers("/api/v1/components/**").permitAll() // Public components

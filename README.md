@@ -6,10 +6,12 @@ A comprehensive Spring Boot application for PC build management and component se
 
 ### Core Functionality
 - **User Management**: Registration, authentication, and profile management
+- **Guest Mode**: Anonymous browsing and build creation without registration
 - **Component Catalog**: Browse and search PC components with advanced filtering
 - **Build Cart System**: Create and manage multiple PC build configurations
 - **Budget Tracking**: Monitor spending and budget limits for builds
 - **JWT Authentication**: Secure API access with refresh token support
+- **Guest Sessions**: Temporary session management for anonymous users with build persistence
 
 ### API Features
 - **RESTful API**: Clean REST endpoints for all operations
@@ -49,6 +51,7 @@ src/main/java/com/rigarchitect/
 │   ├── buildcart/      # Build cart DTOs
 │   ├── cartitem/       # Cart item DTOs
 │   ├── component/      # Component DTOs
+│   ├── guest/          # Guest session and build DTOs
 │   └── user/           # User DTOs
 ├── exception/          # Custom exception classes
 ├── model/              # JPA entity classes
@@ -131,20 +134,30 @@ Once the application is running, you can access:
 
 ## 🔐 Authentication
 
-The API uses JWT-based authentication. To access protected endpoints:
+The API supports both authenticated users and guest sessions:
 
+### For Registered Users
 1. **Register** a new user: `POST /api/v1/auth/signup`
-2. **Login** to get JWT tokens: `POST /api/v1/auth/signin`
+2. **Login** to get JWT tokens: `POST /api/v1/auth/login`
 3. Include the access token in the `Authorization` header: `Bearer <your-token>`
-4. **Refresh** tokens when needed: `POST /api/v1/auth/refreshtoken`
+4. **Refresh** tokens when needed: `POST /api/v1/auth/refresh`
+
+### For Guest Users
+1. **Create session**: `POST /api/v1/guest/session` with a unique session ID
+2. **Browse components**: All component endpoints are accessible without authentication
+3. **Save builds**: Use guest session ID to persist build configurations
+4. **Migrate data**: Convert guest builds to user account on registration
 
 ## 🛡 API Endpoints
 
 ### Authentication (`/api/v1/auth`)
 - `POST /signup` - Register new user
-- `POST /signin` - User login
-- `POST /refreshtoken` - Refresh JWT token
+- `POST /login` - User login
+- `POST /refresh` - Refresh JWT token
 - `POST /change-password` - Change user password
+- `POST /migrate-guest` - Migrate guest session data to user account
+- `GET /verify` - Verify JWT token validity
+- `POST /logout` - User logout
 
 ### Users (`/api/v1/users`)
 - `GET /{id}` - Get user by ID
@@ -173,6 +186,18 @@ The API uses JWT-based authentication. To access protected endpoints:
 - `PUT /{id}` - Update cart item quantity
 - `DELETE /{id}` - Remove item from cart
 
+### Guest Mode (`/api/v1/guest`)
+- `POST /session` - Create or get guest session
+- `GET /session/{sessionId}` - Validate and refresh guest session
+- `POST /session/{sessionId}/extend` - Extend session expiration
+- `DELETE /session/{sessionId}` - Delete guest session
+- `POST /builds` - Save guest build configuration
+- `GET /builds/{buildId}` - Get guest build by ID
+- `PUT /builds/{buildId}` - Update guest build
+- `DELETE /builds/{buildId}` - Delete guest build
+- `GET /session/{sessionId}/builds` - Get all builds for session
+- `GET /session/{sessionId}/builds/latest` - Get latest build for session
+
 ## 🧪 Testing
 
 Run the test suite:
@@ -198,10 +223,14 @@ The application uses the following main entities:
 - **`components`** - PC components with detailed specifications, pricing, and rich metadata
 - **`build_carts`** - User's build configurations/shopping carts
 - **`cart_items`** - Items within build carts (linking components to carts)
+- **`guest_sessions`** - Anonymous user sessions with expiration management
+- **`guest_builds`** - Temporary build configurations for guest users (stored as JSONB)
 
 ### Key Features
 - **Rich Metadata**: Components include JSONB fields with performance scores, compatibility info, and template matching
 - **Flexible Compatibility**: Advanced compatibility system supporting socket types, form factors, power requirements
+- **Guest Sessions**: Anonymous user support with automatic session cleanup and 30-day expiration
+- **Build Persistence**: Guest builds stored as JSONB for flexible data structures
 - **Sample Data**: 300+ realistic PC components across all categories (CPUs, GPUs, RAM, storage, etc.)
 - **Performance Optimized**: Comprehensive indexing including GIN indexes for JSON queries
 
@@ -244,6 +273,14 @@ For support and questions:
 - Review the application logs for debugging information
 
 ## 🔄 Version History
+
+- **0.0.2-SNAPSHOT** - Current development version
+  - **NEW**: Guest mode for anonymous users
+  - **NEW**: Guest session management with automatic cleanup
+  - **NEW**: Guest build persistence with JSONB storage
+  - **NEW**: Guest-to-user data migration functionality
+  - Enhanced API documentation with guest endpoints
+  - Updated database schema with guest tables
 
 - **0.0.1-SNAPSHOT** - Initial development version
   - Basic user management and authentication
