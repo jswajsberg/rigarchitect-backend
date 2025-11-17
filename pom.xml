@@ -14,7 +14,7 @@
     </parent>
 
     <groupId>com.rigarchitect</groupId>
-    <artifactId>rigarchitect</artifactId>
+    <artifactId>rigarchitect-backend</artifactId>
     <version>0.0.1-SNAPSHOT</version>
     <name>RigArchitect</name>
     <description>RigArchitect backend application</description>
