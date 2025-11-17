@@ -28,10 +28,11 @@ public class CartItemService {
     }
 
     /**
-     * Gets all items in a specific build cart.
+     * Gets all items in a specific build cart, ordered by creation date descending (newest first).
+     * This ensures consistent ordering across requests.
      */
     public List<CartItem> getItemsByCart(BuildCart buildCart) {
-        return cartItemRepository.findByBuildCart(buildCart);
+        return cartItemRepository.findByBuildCartOrderByCreatedAtDesc(buildCart);
     }
 
     /**

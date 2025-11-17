@@ -17,6 +17,12 @@ import java.util.Optional;
 public interface CartItemRepository extends JpaRepository<CartItem, Long> {
     List<CartItem> findByBuildCart(BuildCart buildCart);
 
+    /**
+     * Find all cart items for a specific cart, ordered by creation date descending (newest first).
+     * This ensures consistent ordering and prevents items from jumping around in the UI.
+     */
+    List<CartItem> findByBuildCartOrderByCreatedAtDesc(BuildCart buildCart);
+
     Optional<CartItem> findByBuildCartAndComponent_Id(BuildCart buildCart, Long componentId);
 
     /**
