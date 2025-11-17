@@ -31,4 +31,6 @@ build/
 
 ### VS Code ###
 .vscode/
-/.claude/settings.local.json
+/commits.txt
+/commits-full.txt
+/commits-summary.txt
